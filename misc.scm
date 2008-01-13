@@ -1,0 +1,67 @@
+; scheme48's srfi-1 has this function wrong... can't accept multiple lists
+(define (filter-map f ls . lss)
+  (filter identity (apply map (cons f (cons ls lss)))))
+
+; s48 doesn't define this
+(define call/cc call-with-current-continuation)
+
+(define (compose f . fs)
+  (if (null? fs)
+      f
+      (lambda x (f (apply (apply compose fs) x)))))
+
+; incompatible with SRFI-1, but what use is (define first car)?
+(define (first p? ls)
+  (and (not (null? ls))
+       (if (p? (car ls))
+	   (car ls)
+	   (first p? (cdr ls)))))
+
+(define (assoc-replace entry alist)
+  (cond ((null? alist) (list entry))
+	((equal? (car entry) (caar alist))
+	 (cons entry (cdr alist)))
+	(else
+	 (cons (car alist) (assoc-replace entry (cdr alist))))))
+
+; currying.
+(define (specialize f . ls)
+  (lambda more
+    (apply f (append ls more))))
+
+(define (nchars-identical s1 s2)
+  (let ((len (min (string-length s1) (string-length s2))))
+    (let loop ((i 0))
+      (if (= i len)
+	  0
+	  (if (char=? (string-ref s1 i) (string-ref s2 i))
+	      (+ 1 (loop (+ i 1)))
+	      (loop (+ i 1)))))))
+
+(define (bit-set? n bit)
+  (not (zero? (bitwise-and n (arithmetic-shift 1 bit)))))
+
+(define (set-bit n bit)
+  (bitwise-ior n (arithmetic-shift 1 bit)))
+
+(define (unset-bit n bit)
+  (bitwise-not (bitwise-ior n (arithmetic-shift 1 bit))))
+
+(define (coord->i c)
+  (let ((x (- (car c) 1))
+	(y (- (cadr c) 1)))
+    (+ (* y 80) x)))
+
+(define (i->coord i)
+  (list (+ 1 (modulo i 80))
+	(+ 1 (quotient i 80))))
+
+(define (map-bv-ref vec coord)
+  (byte-vector-ref vec (coord->i coord)))
+
+(define (map-bv-set! vec coord v)
+  (byte-vector-set! vec (coord->i coord) v))
+
+(define (map-bv-modify! vec coord f)
+  (let ((i (coord->i coord)))
+    (byte-vector-set! vec i (f (byte-vector-ref vec i)))))
