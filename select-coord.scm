@@ -1,9 +1,3 @@
-(define (min-p <? head . rest)
-  (cond
-   ((null? rest) head)
-   ((<? head (car rest)) (apply min-p <? head (cdr rest)))
-   (else (apply min-p <? rest))))
-
 (define (select-coord from to)
   (define (lim-x n) (if (> n 80) 80 (if (< n 0) 0 n)))
   (define (lim-y n) (if (> n 24) 24 (if (< n 0) 0 n)))

@@ -1,4 +1,7 @@
+; debug
 (define *state* #f)
+(define (gs n) (get-state *state* n))
+(define (ss . stuff) (apply set-state *state* stuff))
 
 (define (set-state state . ls)
   (let ((s (apply internal-set-state state ls)))
@@ -43,3 +46,8 @@
     (and w (cadr w))))
 
 (define (has-state? state name) (assoc name state))
+
+(define (delete-state state name)
+  (let ((new (assoc-delete name state)))
+    (set! *state* new)
+    new))

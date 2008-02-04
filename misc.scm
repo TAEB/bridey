@@ -10,12 +10,12 @@
       f
       (lambda x (f (apply (apply compose fs) x)))))
 
-; incompatible with SRFI-1, but what use is (define first car)?
-(define (first p? ls)
-  (and (not (null? ls))
-       (if (p? (car ls))
-	   (car ls)
-	   (first p? (cdr ls)))))
+;; ; incompatible with SRFI-1, but what use is (define first car)?
+;; (define (first p? ls)
+;;   (and (not (null? ls))
+;;        (if (p? (car ls))
+;; 	   (car ls)
+;; 	   (first p? (cdr ls)))))
 
 (define (assoc-replace entry alist)
   (cond ((null? alist) (list entry))
@@ -23,6 +23,14 @@
 	 (cons entry (cdr alist)))
 	(else
 	 (cons (car alist) (assoc-replace entry (cdr alist))))))
+
+(define (assoc-delete key alist)
+  (cond ((null? alist) '())
+	((equal? key (caar alist))
+	 (cdr alist))
+	(else
+	 (cons (car alist) (assoc-delete key (cdr alist))))))
+
 
 ; currying.
 (define (specialize f . ls)
@@ -45,7 +53,13 @@
   (bitwise-ior n (arithmetic-shift 1 bit)))
 
 (define (unset-bit n bit)
-  (bitwise-not (bitwise-ior n (arithmetic-shift 1 bit))))
+  (bitwise-and n (bitwise-not (arithmetic-shift 1 bit))))
+
+(define (min-p <? head . rest)
+  (cond
+   ((null? rest) head)
+   ((<? head (car rest)) (apply min-p <? head (cdr rest)))
+   (else (apply min-p <? rest))))
 
 (define (coord->i c)
   (let ((x (- (car c) 1))
@@ -65,3 +79,12 @@
 (define (map-bv-modify! vec coord f)
   (let ((i (coord->i coord)))
     (byte-vector-set! vec i (f (byte-vector-ref vec i)))))
+
+(define (char->number c)
+  (- (char->integer c) 48))
+
+(define (char->control char)
+  (integer->char (- (char->integer (char-downcase char)) 96)))
+
+(define (char->control-string char)
+  (string (char->control char)))

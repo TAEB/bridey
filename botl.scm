@@ -1,5 +1,13 @@
-; TODO: status, esp. satiated and stunned
+; don't know to write this as a R5RS macro...
+(define-syntax botl-commands
+    (lambda (form rename compare)
+      (define (make-def name) (list 'define (list name) (list 'botl-get name)))
+      (cons 'begin (map make-def (cdr form)))))
 
+(botl-commands str dex con int wis cha align score
+	       dlvl gold curhp maxhp curpw maxpw ac xlvl xp turns)
+
+;TODO: status, esp. satiated and stunned
 (define data
   (map (lambda (x) (list x #f))
        '(str dex con int wis cha align score
@@ -11,27 +19,7 @@
 (define (botl-get key)
   (cadr (assq key data)))
 
-(define str (specialize botl-get 'str))
-(define dex (specialize botl-get 'dex))
-(define con (specialize botl-get 'con))
-(define int (specialize botl-get 'int))
-(define wis (specialize botl-get 'wis))
-(define cha (specialize botl-get 'cha))
-(define align (specialize botl-get 'align))
-(define score (specialize botl-get 'score))
-(define dlvl (specialize botl-get 'dlvl))
-(define gold (specialize botl-get 'gold))
-(define curhp (specialize botl-get 'curhp))
-(define maxhp (specialize botl-get 'maxhp))
-(define curpw (specialize botl-get 'curpw))
-(define maxpw (specialize botl-get 'maxpw))
-(define ac (specialize botl-get 'ac))
-(define xlvl (specialize botl-get 'xlvl))
-(define xp (specialize botl-get 'xp))
-(define turns (specialize botl-get 'turns))
-
 (define last-line23 "")
-(define last-line24 "")
 
 (define bot1
   (sequence
@@ -111,16 +99,13 @@
       (else (botl-set! key (string->number value)))))
   (define (match-line regex str)
     (let ((m (match regex str)))
-      (if (not m)
-	  (display "botl: no match!\n"))
-      (for-each (lambda (e)
-		  (proc (car e) (get-string (cdr e) str)))
-		(match-submatches m))))
+      (and m
+	   (for-each (lambda (e)
+		       (proc (car e) (get-string (cdr e) str)))
+		     (match-submatches m)))))
   (let ((line23 (get-row-plaintext 23))
 	(line24 (get-row-plaintext 24)))
     (if (not (string=? last-line23 line23))
 	(begin (match-line bot1 line23)
 	       (set! last-line23 line23)))
-    (if (not (string=? last-line24 line24))
-	(begin (match-line bot2 line24)
-	       (set! last-line24 line24)))))
+    (match-line bot2 line24)))
