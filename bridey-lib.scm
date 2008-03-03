@@ -149,12 +149,16 @@
 			(lambda (c)
 			  (find-path-towards state (get-coord) c))
 			(get-state state 'interesting-squares)))))
-      (if (null? paths)
-	  (let ((next (nu state)))
-	    (if next
-		(go-to state next)
-		'done))
-	  (go-to state (last (car paths))))))))
+      (let ((dest (and (not (null? paths))
+		       (last (car paths)))))
+	(if (or (not dest)
+		(> (length (car paths))
+		   (* 2 (min-distance (get-coord) dest))))
+	    (let ((next (new-nu state)))
+	      (if next
+		  (go-to state next)
+		  'done))
+	    (go-towards state dest)))))))
 
 (define (handle-question state)
   (send-expect "\e" expect-generic)
@@ -172,6 +176,33 @@
 	    (begin (send-expect " " expect-generic)
 		   (read-topl state))
 	    state))))
+
+(define (new-nu state)
+  (define (p? c)
+    (and (not (visited? c))
+	 (or (any (lambda (c) (not (seen? c)))
+		  (neighbor-squares c))
+	     (and (dead-end? state c)
+		  (< (searched-for state c) 15)))))
+  (define (cost state from to)
+    (let ((dir (map - to from)))
+      (cond ((door? to) 3)
+	    ((bad-trap? to) 25)
+	    ((and (boulder? to) (not (seen? (map + to dir))))
+	     ; explore other areas first if we don't know where
+	     ; we're pushing towards
+	     15)
+	    (else 1))))
+  (let ((path (find-path state
+			 (get-coord)
+			 p?
+			 (lambda x 0)
+			 (lambda (state from to seed)
+			   (passable? state from to))
+			 #f
+			 cost)))
+    (and path (last path))))
+
 
 
 (define (nu state)
@@ -227,15 +258,14 @@
 		    (member (get-coord) path)
 		    (equal? (last path) dest)))
 	  (let ((new-path (find-path-towards state (get-coord) dest)))
-	    (if (not new-path)
-		'path-not-found
-		(begin (set! path new-path)
-		       (set! first-dark
-			     (any (lambda (c)
-				    (and (char=? (square-char c) #\space)
-					 c))
-				  path))
-		       (go-towards state dest))))
+	    (and new-path
+		 (begin (set! path new-path)
+			(set! first-dark
+			      (any (lambda (c)
+				     (and (char=? (square-char c) #\space)
+					  c))
+				   path))
+			(go-towards state dest))))
 	  (if (and first-dark
 		   (not (char=? (square-char first-dark) #\space)))
 	      (begin (set! path #f)

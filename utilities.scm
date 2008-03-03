@@ -143,6 +143,7 @@
 ;(define (touching? a b)
 ;  (= 1 (nsteps-to a b)))
 
+; this is kind of bad
 (define (dead-end? state . opt)
   (let ((coord (if (null? opt) (get-coord) (car opt))))
     (= 3 (count

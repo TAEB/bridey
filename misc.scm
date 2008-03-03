@@ -1,6 +1,6 @@
 ; scheme48's srfi-1 has this function wrong... can't accept multiple lists
-(define (filter-map f ls . lss)
-  (filter identity (apply map (cons f (cons ls lss)))))
+;(define (filter-map f ls . lss)
+;  (filter identity (apply map (cons f (cons ls lss)))))
 
 ; s48 doesn't define this
 (define call/cc call-with-current-continuation)

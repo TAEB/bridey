@@ -95,6 +95,8 @@
     (set 'blind? #f))
    (("Everything looks SO boring now.")
     (set 'hallu? #f))
+   (("Everything feels SO boring now.")
+    (set 'hallu? #f))
    (("You feel a bit steadier now.")
     (set 'stunned? #f))
 

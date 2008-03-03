@@ -93,7 +93,7 @@
   (files botl))
 
 (define-structure misc
-  (export filter-map call/cc compose specialize first assoc-replace assoc-delete
+  (export call/cc compose specialize first assoc-replace assoc-delete
 	  nchars-identical bit-set? set-bit unset-bit min-p
 	  i->coord coord->i map-bv-ref map-bv-set! map-bv-modify!
 	  char->number char->control char->control-string)

@@ -1,8 +1,9 @@
 ; don't know to write this as a R5RS macro...
 (define-syntax botl-commands
-    (lambda (form rename compare)
-      (define (make-def name) (list 'define (list name) (list 'botl-get name)))
-      (cons 'begin (map make-def (cdr form)))))
+  (lambda (form rename compare)
+    (define (make-def name)
+      (list 'define (list name) (list 'botl-get (list 'quote name))))
+    (cons 'begin (map make-def (cdr form)))))
 
 (botl-commands str dex con int wis cha align score
 	       dlvl gold curhp maxhp curpw maxpw ac xlvl xp turns)
