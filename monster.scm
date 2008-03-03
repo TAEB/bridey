@@ -279,7 +279,7 @@
 (add-mon "watch captain" #\@ 10 10 10 15 -4 1450 400 0 2 '() '() '(humanoid omnivore) 'green)
  
 (add-mon "Medusa" #\@ 20 12 2 50 -15 1450 400 0 3 '(poison stoning) '(poison stoning) '(fly swim amphibious humanoid poisonous omnivore) 'bright-green)
-(add-mon "Wizard of Yendor" #\@ 30 12 -8 100 A_NONE 1450 400 0 2 '(fire poison) '(fire poison) '(fly breathless humanoid regen see-invis teleport teleport-control omnivore) 'magenta)
+(add-mon "Wizard of Yendor" #\@ 30 12 -8 100 #f 1450 400 0 2 '(fire poison) '(fire poison) '(fly breathless humanoid regen see-invis teleport teleport-control omnivore) 'magenta)
 (add-mon "Croesus" #\@ 20 15 0 40 15 1450 400 0 2 '() '() '(humanoid see-invis omnivore) 'magenta)
 (add-mon "ghost" #\X 10 3 -5 50 -5 1450 0 0 2 '(cold disintegration sleep poison stoning) '() '(fly breathless phasing humanoid unsolid) 'gray)
 (add-mon "shade" #\X 12 10 10 0 0 1450 0 0 2 '(cold disintegration sleep poison stoning) '() '(fly breathless phasing humanoid unsolid see-invis) 'black)
@@ -332,7 +332,7 @@
 (add-mon "crocodile" #\: 6 9 5 0 0 1450 400 0 3 '() '() '(swim amphibious animal thick-hide no-hands oviparous carnivore) 'brown)
 (add-mon "salamander" #\: 8 12 -1 0 -9 1500 400 0 2 '(sleep fire) '(fire) '(humanoid slithy thick-hide poisonous) 'orange)
  
-(add-mon "long worm tail" #\~ 0 0 0 0 0 0 0 0 0 '() '() '(0L) 'brown),
+(add-mon "long worm tail" #\~ 0 0 0 0 0 0 0 0 0 '() '() '() 'brown),
  
 (add-mon "archeologist" #\@ 10 12 10 1 3 1450 400 0 2 '() '() '(humanoid tunnel needpick omnivore) 'white)
 (add-mon "barbarian" #\@ 10 12 10 1 0 1450 400 0 2 '(poison) '() '(humanoid omnivore) 'white)
