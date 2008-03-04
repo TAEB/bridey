@@ -11,6 +11,11 @@
 	parse state misc term botl utilities)
   (files messages))
 
+(define-structure monster
+  (export)
+  (open scheme tables)
+  (files monster))
+
 (define-structure pathfinding
   (export find-path find-path-to find-path-towards)
   (open scheme srfi-1 sorting
