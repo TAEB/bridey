@@ -30,9 +30,9 @@
 	  artifact? scroll? tool? ring? potion? spellbook? armor? food?
 	  artifact-base-item artifact-alignment quest-artifact?
 	  artifact-role
-	  item-figurine-of item-statue-of
-	  item-tin-of item-egg-of item-corpse-of item-egg? item-figurine?
-	  item-statue? item-historic-statue? item-corpse? item-price
+	  item-figurine-of item-figurine? item-statue-of item-statue?
+	  item-tin-of item-egg-of item-corpse-of item-tin? item-egg?
+	  item-historic-statue? item-corpse? item-price
 	  item-recharges item-charges item-enchantment item-diluted?
 	  item-greased? item-poisoned? item-lit? item-we-laid? item-chained-to?
 	  item-quivered? item-alt-weapon? item-partly-eaten? item-partly-used?

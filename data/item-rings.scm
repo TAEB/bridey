@@ -21,10 +21,13 @@
     "iron" "brass" "copper" "twisted" "steel" "silver" "gold" "ivory"
     "emerald" "wire" "engagement" "shiny" "black onyx" "tiger eye"))
 
+(define (unidentified-ring? item)
+  (let* ((name (item-name item))
+	 (desc (string-drop-suffix " ring" name)))
+    (and desc (member desc ring-appearances))))
+
 (define (ring? item)
   (let ((class (get-item-field item 1)))
     (or (and class (eq? class 'ring))
-	(let ((name (item-name item)))
-	  (or (string=? name "ring")
-	      (let ((desc (string-drop-suffix " ring" name)))
-		(and desc (member desc ring-appearances))))))))
+	(string=? (item-name item) "ring")
+	(unidentified-ring? item))))

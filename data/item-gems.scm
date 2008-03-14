@@ -33,5 +33,8 @@
     "yellowish brown"))
 
 (define (unidentified-gem? item)
-  (member (string-drop-suffix " gem" (item-name item))
-	  gem-colors))
+  (let* ((name (item-name item))
+	 (color (or (string-drop-suffix " gem" name)
+		    (string-drop-suffix " gems" name))))
+    (and color (member color gem-colors))))
+

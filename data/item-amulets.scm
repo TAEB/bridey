@@ -16,10 +16,13 @@
   '("circular" "spherical" "oval" "triangular" "pyramidal"
     "square" "concave" "hexagonal" "octagonal"))
 
+(define (unidentified-amulet? item)
+  (let* ((name (item-name item))
+	 (desc (string-drop-suffix " amulet" name)))
+    (and desc (member desc amulet-appearances))))
+
 (define (amulet? item)
   (let ((class (get-item-field item 1)))
     (or (and class (eq? class 'amulet))
-	(let ((name (item-name item)))
-	  (or (string=? name "amulet")
-	      (let ((desc (string-drop-suffix " amulet" name)))
-		(and desc (member desc amulet-appearances))))))))
+	(string=? (item-name item) "amulet")
+	(unidentified-amulet? item))))

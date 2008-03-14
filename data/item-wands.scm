@@ -18,10 +18,13 @@
     "aluminum" "uranium" "iron" "steel" "hexagonal" "short"
     "runed" "long" "curved" "forked" "spiked" "jeweled"))
 
+(define (unidentified-wand? item)
+  (let* ((name (item-name item))
+	 (desc (string-drop-suffix " wand" name)))
+    (and desc (member desc wand-appearances))))
+
 (define (wand? item)
   (let ((class (get-item-field item 1)))
     (or (and class (eq? class 'wand))
-	(let ((name (item-name item)))
-	  (or (string=? name "wand")
-	      (let ((desc (string-drop-suffix " wand" name)))
-		(and desc (member desc wand-appearances))))))))
+	(string=? (item-name item) "wand")
+	(unidentified-wand? item))))

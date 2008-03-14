@@ -33,23 +33,23 @@
     ("Trollsbane" 'unaligned "morning star" 200 #f)
     ("Werebane" 'unaligned "silver saber" 1500 #f)))
 
+(define (artifact-name-or-named item)
+  (let ((name (item-name item)))
+    (if (assoc name artifact-list)
+	name
+	(let ((named (item-named item)))
+	  (and named
+	       (assoc named artifact-list)
+	       (string=? (item-identity name)
+			 (artifact-base-item named))
+	       named)))))
+
 (define (arti-get-field item n)
-  (let ((name (item-name item)))
-    (let ((e (assoc name artifact-list)))
-      (and e (list-ref e n)))))
+  (let ((x (assoc (artifact-name-or-named item)
+		  artifact-list)))
+    (and x (list-ref x n))))
 
-(define (artifact-valid? item)
-  (let ((name (item-name item)))
-    (and (char-upper-case? (string-ref name 0))
-	 (arti-get-field name 0))))
-
-(define (artifact? item)
-  (or (artifact-valid? item)
-      (let ((name (item-named item)))
-	(and name
-	     (artifact-valid? name)
-	     (string=? (item-identity (item-name item))
-		       (artifact-base-item name))))))
+(define artifact? artifact-name-or-named)
 
 (define (artifact-alignment name) (arti-get-field name 1))
 (define (artifact-base-item name) (arti-get-field name 2))

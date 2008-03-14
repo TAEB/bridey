@@ -28,11 +28,14 @@
     "cloudy" "effervescent" "black" "golden" "brown" "fizzy"
     "dark" "white" "murky" "dark green" "sky blue" "brilliant blue"))
 
+(define (unidentified-potion? item)
+  (let* ((name (item-name item))
+	 (desc (or (string-drop-suffix " potion" name)
+		    (string-drop-suffix " potions" name))))
+    (and desc (member desc potion-appearances))))
+
 (define (potion? item)
   (let ((class (get-item-field item 1)))
     (or (and class (eq? class 'potion))
-	(let ((name (item-name item)))
-	  (or (member name '("potion" "potions"))
-	      (let ((desc (or (string-drop-suffix " potion" name)
-			      (string-drop-suffix " potions" name))))
-		(and desc (member desc potion-appearances))))))))
+	(member (item-name item) '("potion" "potions"))
+	(unidentified-potion? item))))

@@ -29,10 +29,13 @@
     "thin" "thick" "dog eared" "light green" "dark green"
     "light blue" "dark blue" "light brown" "dark blue"))
 
+(define (unidentified-spellbook? item)
+  (let* ((name (item-name item))
+	 (desc (string-drop-suffix " spellbook" name)))
+    (and desc (member desc spellbook-appearances))))
+
 (define (spellbook? item)
   (let ((class (get-item-field item 1)))
     (or (and class (eq? class 'spellbook))
-	(let ((name (item-name item)))
-	  (or (string=? name "spellbook")
-	      (let ((desc (string-drop-suffix " spellbook" name)))
-		(and desc (member desc spellbook-appearances))))))))
+	(string=? (item-name item) "spellbook")
+	(unidentified-spellbook? item))))
