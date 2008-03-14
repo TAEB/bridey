@@ -1,6 +1,7 @@
 #include <sys/uio.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -23,12 +24,16 @@ enum msg_type {
    HUNGER,
    ALIGN,
    END,
-   TEST
+   TEST,
+   PAUSED
 };
 
 int last_msg_type = TEST;
 
+int fd;
 int done = 0;
+int paused = 0;
+int big_format = 0;
 struct termios old;
 int width = 112;
 int height = 34;
@@ -185,9 +190,21 @@ void handle_msg() {
       printf("Testing won too thee. Got: %s\n", msg.buf);
       break;
    case OUTPUT:
-      process_output(msg.buf, msg.len);
+      if (big_format)
+         process_output(msg.buf, msg.len);
+      else
+         write(1, msg.buf, msg.len);
+      break;
+   case PAUSED:
+      write(fd, paused ? "#t " : "#f ", 3);
+      paused = 0;
       break;
    }
+}
+
+void handle_cmd(int c) {
+   if (c == 'p')
+      paused = 1;
 }
 
 void clear(y, x1, x2) {
@@ -376,9 +393,20 @@ void print_attr(char *str, int line) {
 int main(void)
 {
    char c, buf[256];
-   int i, lis_sock, sock, fd;
+   int i, lis_sock, sock;
    struct sockaddr_in addr, mukou;
    socklen_t len;
+   struct winsize ws;
+
+   ioctl(1, TIOCGWINSZ, &ws);
+   if (ws.ws_col == 80 && ws.ws_row == 24)
+      big_format = 0;
+   else if (ws.ws_col == 112 && ws.ws_row == 34)
+      big_format = 1;
+   else {
+      fprintf(stderr, "bridey-console: wrong window size.\n");
+      exit(1);
+   }
 
    lis_sock = socket(PF_INET, SOCK_STREAM, 0);
    if (lis_sock == -1)
@@ -398,7 +426,8 @@ int main(void)
    fd = accept(lis_sock, (struct sockaddr *)&mukou, &len);
 
    screen_init();
-   draw_box();
+   if (big_format)
+      draw_box();
    fcntl(0, F_SETFL, O_NONBLOCK);
    /*fcntl(1, F_SETFL, O_NONBLOCK);*/
 
@@ -408,7 +437,7 @@ int main(void)
       read_msg(fd);
       handle_msg();
       if (read(0, &c, 1))
-         write(fd, &c, 1);
+         handle_cmd(c);
    }
 
    close(fd);

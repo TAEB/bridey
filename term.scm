@@ -60,8 +60,9 @@
   (bit-set? (map-bv-ref colors coord) inverse-bit))
 
 (define (iterate-screen f seed . opt)
-  (let ((start (if (null? opt) 0 (coord->i (car opt))))
-	(end (if (< (length opt) 2) last (coord->i (cadr opt)))))
+  ; defaults to '(1 2) and '(80 22)
+  (let ((start (if (null? opt) 80 (coord->i (car opt))))
+	(end (if (null? opt) 1795 (coord->i (cadr opt)))))
     (let loop ((i start)
 	       (s seed))
       (if (> i end)
@@ -74,15 +75,17 @@
 					  inverse-bit))))))))
 
 (define (term-find-symbol find-char find-color . opt)
-  (apply iterate-screen
-	 (lambda (ls coord char color)
-	   (if (and (char=? find-char char)
-		    (or (not find-color)
-			(eq? find-color color)))
-	       (cons coord ls)
-	       ls))
-	 '()
-	 opt))
+  (let ((ls (apply iterate-screen
+		   (lambda (ls coord char color)
+		     (if (and (char=? find-char char)
+			      (or (not find-color)
+				  (eq? find-color color)))
+			 (cons coord ls)
+			 ls))
+		   '()
+		   opt)))
+    (and (not (null? ls))
+	 ls)))
 
 (define (get-row-plaintext y . opt)
   (let* ((start (if (null? opt) 0 (- (car opt) 1)))

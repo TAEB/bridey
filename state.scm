@@ -1,7 +1,5 @@
 ; debug
 (define *state* #f)
-(define (gs n) (get-state *state* n))
-(define (ss . stuff) (apply set-state *state* stuff))
 
 (define (set-state state . ls)
   (let ((s (apply internal-set-state state ls)))
@@ -38,7 +36,7 @@
       
 
 (define (get-state state name)
-  (let ((w (assoc name state)))
+  (let ((w (assq name state)))
     (if #f;(not w)
 	(begin (display "NO STATE: ")
 	       (write name)

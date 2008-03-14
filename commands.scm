@@ -1,53 +1,27 @@
-;(add-command far-look coord) ; the far-look command, ';'
-;(add-command look)
-;(add-command get-inventory)
-;(add-command engraving)
-;(add-command objects-here)
-
-;(add-command blind?)
-(define (blind?) #f)
-
-;(add-command hostile? monster)
-
-
-; the item functions...
-;; (add-command quantity item)
-;; (add-command buc item)
-;; (add-command greased? item)
-;; (add-command errodeproof? item)
-;; (add-command errosion-level item)
-;; (add-command enchantment item)
-;; (add-command item-name item)
-;; (add-command item-group-name item)
-;; (add-command item-indiv-name item)
-;; (add-command unpaid? item)
-;; (add-command cost item)
-;; (add-command wielded? item)
-;; (add-command wielded-oh? item)
-
-;; (add-command quivered? item)
-;; (add-command alternate-weapon? item)
-; TODO partly eaten, embedded in skin, welded to hand, etc. etc.
-
 (define (move state dir . opt)
   (define get (specialize get-state state))
   (define set (specialize set-state state))
   (let ((old-coord (get-coord))
 	(dest (map + (get-coord) dir))
+	(char (square-char-dir dir))
 	(command (list 'move dir))
 	(step-on-brown-+? (and (not (null? opt)) (car opt))))
     (cond ((or (locked-door? dest)
 	       (closed-door? dest)
 	       (and (door? dest)
 		    (diagonal? dir))
-	       (and (char=? (square-char dest) #\+)
+	       (and (char=? char #\+)
 		    (eq? (square-color dest) 'brown)
 		    (not step-on-brown-+?)))
 	   (do-door state dir))
-	  ((get 'in-pit?)
+	  ((get 'in-trap?)
 	   (send-expect (dir->vi dir) expect-no-change)
-	   (process-turn (set 'last-command command
-			      'expected-coord old-coord)))
+	   (let ((still? (equal? (get-coord) old-coord)))
+	     (process-turn (set 'last-command command
+				'expected-coord (if still? old-coord dest)
+				'in-trap? still?))))
+	  ((monster? state dest)
+	   (push-action-go state handle-blocker))
 	  (else
 	   (send-expect
 	    (dir->vi dir)
@@ -60,17 +34,40 @@
 			   (> tries 2)))
 		  (> tries 4))))
 	   (if (not (equal? (get-coord) old-coord))
-	       (process-turn
-		(set 'last-coord old-coord
-		     'last-command command
-		     'expected-coord (map + old-coord dir)))
-	       ; okay, we didn't move. Make sure we're done reading, then
-	       ; investigate.
+	       (begin
+					; corridor diagonal shortcut
+		 (and (diagonal? dir)
+		      (char=? char #\#)
+		      (let ((adj (list (map + old-coord (list (car dir) 0))
+				       (map + old-coord (list 0 (cadr dir))))))
+			(if (equal? (map square-char adj) (list #\# #\space))
+			    (mark-visited (car adj)))
+			(if (equal? (map square-char adj) (list #\space #\#))
+			    (mark-visited (cadr adj)))))
+		 (process-turn
+		  (set 'last-coord old-coord
+		       'last-command command
+		       'objects-here '()
+		       'stuck-boulders (remove
+					(lambda (x)
+					  (equal? (car x) dest))
+					(get 'stuck-boulders))
+		       'expected-coord (map + old-coord dir))))
+					; okay, we didn't move. Make sure we're done reading, then
+					; investigate.
 	       (begin
 		 (read-expect (lambda (res tries) (> tries 2)))
-		 (cond ((or (and (diagonal? dir)
+		 (cond ((and (boulder? dest)
+			     (equal?
+			      (read-messages)
+			      '("You try to move the boulder, but in vain.")))
+			(process-turn
+			 (set 'stuck-boulders (cons (list dest dir)
+						    (get 'stuck-boulders)))))
+		       ((or (and (diagonal? dir)
 				 (not (square-clear? state dest)))
 			    (open-door? dest)) ; maybe a monster closed it
+			(display "opening door with update\n")
 			(do-door state dir #t))
 		       ((item? state dest)
 			(let ((str (far-look dest)))
@@ -122,9 +119,11 @@
 	       'unlock
 	       (if (diagonal? dir)
 		   (get-aligned)
-		   (if (> (nchars-identical (get 'engraving)
-					    "Closed for inventory.")
-			  4)
+		   (if (and (get 'engraging)
+			    (> (nchars-identical
+				(get 'engraving)
+				"Closed for inventory.")
+			       4))
 		       'make-a-note-somewhere
 		       (kick state dir)))))
 	  ((not (or (and (char=? char #\+)
@@ -161,12 +160,12 @@
       (search state)
       (let ((state
 	     (send-expect
-	      (string (integer->char 4)) ; ^D
+	      (char->control-string #\D)
 	      (lambda (res tries)
 		(or (and (at-more?) ; injured
 			 state)
 		    (and (match-before-cur? "In what direction? ")
-			 (send-expect (dir->vi) expect-generic)
+			 (send-expect (dir->vi dir) expect-generic)
 			 state))))))
 	(process-turn
 	 (set-state state
@@ -198,6 +197,42 @@
 	      'last-coord (get-state state 'coord)
 	      'expected-coord (get-state state 'coord))))
 
+(define (eat-from-floor state p)
+  (send-expect "e" expect-generic)
+  (let loop ()
+    (if (not (at-question?))
+	'nothing-to-eat-on-floor
+	(or (and-let* ((str (car (read-messages)))
+		       (item (string-drop-prefix "There is " str))
+		       (item (string-drop-suffix " here; eat it? [ynq] (n)"
+						 item))
+		       ((p item))
+		       (coord (get-coord)))
+	      (begin (send-expect "y" expect-generic)
+		     (process-turn
+		      (set-state state
+				 'last-command (list 'eat-from-floor item)
+				 'last-coord coord
+				 'objects-here '()
+				 'do-look? (= (length
+					       (get-state state 'objects-here))
+					      1)
+				 'expected-coord coord))))
+	    (begin (send-expect "n" expect-generic)
+		   (loop))))))
+
+(define (save)
+  (send-expect "S" (lambda (res tries)
+		     (match-before-cur? "Really save? [yn] (n) ")))
+  (send-expect "y" #f)
+  (nethack-end))
+
+(define (quit)
+  (send-expect "#qu\n" (lambda (res tries)
+			 (match-before-cur? "Really quit? [yn] (n) ")))
+  (send-expect "y" #f)
+  (nethack-end))
+	
 ;; (define (pick-up state . ls)
 ;;   (let ((command (cons 'pick-up ls)))
 ;;     (ask command)

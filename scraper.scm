@@ -23,6 +23,57 @@
 			  (write s)
 			  (display "!\n")))))))))
 
+(define (get-objects-here state)
+  (define (getline y)
+    (string-trim-right
+     (get-row-plaintext y (if (or (= (cadr (get-coord)) 24)
+				  (not (botl-visible?)))
+			      1
+			      (- (car (get-coord)) 8)))))
+  (define (things-here-string? s)
+    (or (string=? s "Things that are here:")
+	(string=? s "Things that you feel here:")))
+  (let* ((topline (getline 1))
+	 (end-row (- (cadr (get-coord)) 1))
+	 (start-row
+	  (cond ((things-here-string? topline) 2)
+		((things-here-string? (getline 3)) 4)
+		(else 1)))
+	 (first-page? (not (= start-row 1)))
+	 (objects (map getline (range start-row end-row))))
+    (send-expect " " expect-generic)
+    (let ((ls (if first-page?
+		  objects
+		  (append objects (get-state state 'objects-here)))))
+      (if (<= start-row 2)
+	  (set-state state 'objects-here ls)
+	  (set-state state
+		     'objects-here ls
+		     'messages (cons topline
+				     (get-state state 'messages)))))))
+	      
+(define (read-topl state)
+  (cond ((at-question?) ((get-state state 'question-handler) state))
+	((and (at-more?) (or (> (cadr (get-coord)) 4)
+			     (not (botl-visible?))))
+	 (read-topl (get-objects-here state)))
+	(else
+	 (let ((state (set-state
+		       state
+		       'messages (append (reverse (read-messages))
+					 (get-state state 'messages)))))
+	   (if (at-more?)
+	       (begin (send-expect " " expect-generic)
+		      (read-topl state))
+	       (begin (if (not (equal? (get-coord)
+				       (get-state state 'expected-coord)))
+			  (read-expect (lambda (res tries) (> tries 2))))
+		      state))))))
+
+(define (do-look state)
+  (send-expect ":" expect-dunno)
+  (read-topl state))
+
 (define (redraw-screen)
   (send-expect (char->control-string #\R) expect-dunno))
 

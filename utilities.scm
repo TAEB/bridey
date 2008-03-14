@@ -1,10 +1,8 @@
 (define (valid-coord? coord)
-  (let ((x (car coord))
-	(y (cadr coord)))
-    (and (>= x 0) (<= x 80)
-	 (>= y 0) (<= y 24))))
-
-(define (monster-string? str) 'todo)
+  (apply (lambda (x y)
+	   (and (>= x 0) (<= x 80)
+		(>= y 2) (<= y 22)))
+	 coord))
 
 (define (monster? state coord)
   (let ((ch (square-char coord))
@@ -16,7 +14,7 @@
 	(and (not rogue?) (char=? ch #\]))
 	(and (char=? ch #\:)
 	     (or (not rogue?)
-		 (monster-string? (far-look coord)))))))
+		 (monster-valid? (far-look coord)))))))
 
 (define (item? state coord)
   ; gold counts but not boulders
@@ -38,7 +36,7 @@
 	     (or (char=? ch #\,)
 		 (char=? ch #\])
 		 (and (char=? ch #\:)
-		      (not (monster-string? (far-look coord))))))
+		      (not (monster-valid? (far-look coord))))))
 	(and (not rogue?)
 	     (or (char=? ch #\%)
 		 (char=? ch #\[))))))
@@ -98,7 +96,8 @@
   (case (cadr dir)
     ((-1) (case (car dir) ((-1) "y") ((0) "k") ((1) "u")))
     (( 0) (case (car dir) ((-1) "h") ((0)  #f) ((1) "l")))
-    (( 1) (case (car dir) ((-1) "b") ((0) "j") ((1) "n")))))
+    (( 1) (case (car dir) ((-1) "b") ((0) "j") ((1) "n")))
+    (else 'bad-dir-in-dir->vi)))
 
 (define (vi->dir vi)
   (case (string-ref vi 0)
@@ -132,7 +131,10 @@
   (not (= (abs (apply + dir)) 1)))
 
 (define (weird-position? state)
-  (not (equal? (get-coord) (get-state state 'expected-coord))))
+  (or (get-state state 'weird-position?)
+      (let ((exp (get-state state 'expected-coord)))
+	(and exp
+	     (not (equal? (get-coord) exp))))))
 
 (define (boulder? coord)
   (char=? (square-char coord) #\0))
@@ -156,7 +158,11 @@
 (define (passable? state from to)
   (let ((dir (map - to from)))
     (not (or (wall? to)
-	     (boulder? to)
+	     (and (boulder? to)
+		  (or (member (list to dir) (get-state state 'stuck-boulders))
+		      (let ((beyond (map + to dir)))
+			(and (seen? beyond)
+			     (char=? (square-char beyond) #\space)))))
 	     (char=? (square-char to) #\space)
 	     (and (boulder? to)
 		  (valid-coord? (map + to dir))
@@ -233,6 +239,23 @@
 (define (seen? c) (square-info-set? 3 c))
 (define (mark-seen c) (square-info-set 3 c))
 
+(define square-covered-list '())
+(define (square-covered-by-item? c) (square-info-set? 4 c))
+(define (set-square-covered-by c)
+  (square-info-set 4 c)
+  (set! square-covered-list
+	(assoc-replace (list c (square-char c) (square-color c))
+		       square-covered-list)))
+(define (square-covered-match-current? c)
+  (and (square-covered-by-item? c) ; don't call on empty square
+       (let* ((x (cdr (assoc c square-covered-list)))
+	      (char (car x))
+	      (color (cadr x)))
+	 (and (char=? char (square-char c))
+	      (eq? color (square-color c))))))
+
+(define (unmark-square-covered-by-item c) (square-info-unset 4 c))
+
 (define (trap? c) (square-info-set? 5 c))
 (define (mark-trap coord type)
   (square-info-set 5 coord)
@@ -241,7 +264,7 @@
 (define (unmark-trap c) (square-info-unset 5 c))
 (define (trap-type coord)
   (and (trap? coord)
-       (assoc coord square-info-trap-types)))
+       (cdr (assoc coord square-info-trap-types))))
 
 (define (embedded? c) (square-info-set? 6 c))
 (define (mark-embedded c) (square-info-set 6 c))
@@ -260,10 +283,7 @@
    (lambda (seed coord char color)
      (if (char=? char #\#)
 	 (for-each mark-seen (neighbor-squares coord))))
-   #f
-   '(1 2)
-   '(80 22)))
-	  
+   #f))
 
 ; no diagonals
 (define (orthogonal? dir1 dir2)
@@ -271,5 +291,52 @@
       (and (zero? (cadr dir1)) (zero? (car dir2)))))
 
 (define (same-level? state)
-  'intra-level-support-coming-soon)
+  'inter-level-support-coming-soon)
 
+(define (maybe-add-corpse state monster)
+  (let* ((cmd (get-state state 'last-command))
+	 (coord (and (eq? (car cmd) 'fight)
+		     (map + (get-state state 'expected-coord) (cadr cmd)))))
+    (if (and coord
+	     (monster-leaves-corpse? monster)
+	     (not (square-covered-match-current? coord))
+	     (char=? (square-char coord) #\%)
+	     (eq? (square-color coord) (monster-color monster)))
+	(let ((corpses (or (get-state state 'corpses) '()))
+	      (cutoff (- (turns) 40)))
+	  (set-state state
+		     'corpses
+		     (cons (list coord monster (turns))
+			   (remove (lambda (e)
+				     (or (< (caddr e) cutoff)
+					 (and (equal? coord (car e))
+					      (string=? monster (cadr e)))))
+				   corpses))))
+	state)))
+
+(define (add-fountain state coord)
+  (modify-state
+   state
+   'fountains (lambda (ls)
+		(let ((x (list (dlvl) coord)))
+		  (if (member x ls)
+		      ls
+		      (cons x ls))))))
+
+(define (decrement-item state slot)
+  (let* ((inventory (get-state state 'inventory))
+	 (item ((cadr (assoc slot inventory))))
+	 (n (item-quantity item)))
+    (if (<= (item-quantity item) 1)
+	(set-state state 'do-inventory? #t)
+	(set-state
+	 state
+	 'inventory
+	 (assoc-replace (list slot (item-adjust-quantity item (- n 1))))))))
+
+(define (alignment->number align)
+  (case align
+    ((lawful) 1)
+    ((neutral) 0)
+    ((chaotic) -1)
+    (else #f)))

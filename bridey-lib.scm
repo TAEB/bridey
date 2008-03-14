@@ -1,35 +1,46 @@
-(define (initial-state)
-  (let ((state
-	 (set-state
-	  '()
-	  'explorer identity
-	  'coord (get-coord)
-	  'last-coord (get-coord)
-	  'expected-coord (get-coord)
-	  'last-command '(#f #f)
-	  'inventory '()
-	  'avatar #\@ ; TODO: char selection. Right now we're all bar-hum-mal-cha
-	  'searched (make-byte-vector (* 80 24) 0)
-	  'blind? #f
-	  'stuck-boulders '()
-	  'rooms '()
-	  'searched-walls '()
-	  'fountains '()
-	  'thrones '()
-	  'pickup-pred (lambda (x) #f))))
-    (mark-visited (get-coord))
-    (update-seen-squares state)
-    state))
+(define (initial-state char)
+  (set-state
+   (create-level '())
+   'nutrition 900
+   'encumbrance 0
+   'last-command '(#f #f)
+   'do-inventory? #t
+   'fountains '()
+   'thrones '()
+   'interesting-squares '()
+   'question-handler handle-question
+   'pickup-pred (lambda (x) #f)))
+
+(define (create-level state)
+  (set-state
+   state
+   'searched (make-byte-vector (* 80 24) 0)
+   'stuck-boulders '()
+   'rooms '()
+   'searched-walls '()))
 
 (define (process-turn state)
   ; need a macro for this :)
-  (let* ((state (read-topl (set-state state 'messages '())))
+  (let* ((state (set-state state
+			   'messages '()
+			   'interesting-squares '()))
+	 (state (read-topl state))
 	 (state (set-state state 'coord (get-coord)))
 	 (state (fold process-message state (get-state state 'messages)))
+	 (state (if (and (get-state state 'do-look?)
+			 (not (get-state state 'blind?)))
+		    (do-look (set-state state 'do-look? #f))
+		    state))
+	 (state (if (get-state state 'do-inventory?)
+		    (set-state state
+			       'inventory (get-inventory)
+			       'do-inventory? #f)
+		    state))
+	 (state (begin (botl-update) (turns-passed state)))
+	 (state (update-map state))
 	 (get (specialize get-state state))
 	 (set (specialize set-state state))
 	 (coord (get-coord)))
-    (botl-update)
     (mark-visited coord)
     (mark-seen coord)
     (if (not (get 'blind?))
@@ -53,7 +64,30 @@
 			   (neighbor-squares))))
 	  (search (get 'searching-for)))
       (cond ((not (null? squares-with-mons)) (hit-something state))
-	    (else ((get 'explorer) state))))))
+	    (else (maybe-eat state))))))
+
+(define (turns-passed state)
+  (define get (specialize get-state state))
+  (define set (specialize set-state state))
+  (define (hunger turn)
+    (count
+     identity
+     (list (not (or (get 'slow-digestion?)
+		    (and (get 'polymorphed)
+			 (monster-breathless? (get 'polymorphed)))))
+	   (and (odd? turn) (eq? (get 'regeneration?) 'ring))
+	   (and (odd? turn) (> (get 'encumbrance) 1))
+	   (and (even? turn) (get 'rapid-hunger?))
+	   (and (even? turn) (eq? (get 'conflict?) 'ring))
+	      (and (= (modulo turn 20) 4) (get 'left-ring))
+	      (and (= (modulo turn 20) 8) (get 'amulet))
+	      (and (= (modulo turn 20) 12) (get 'right-ring))
+	      (and (= (modulo turn 20) 16) (get 'have-aoy?)))))
+  (let ((last (or (get 'last-turn) 1)))
+    (set 'nutrition (- (get 'nutrition)
+		       (* (if (eq? (car (get 'last-command)) 'fight) 2 1)
+			  (apply + (map hunger (range last (- (turns) 1))))))
+	 'last-turn (turns))))
 
 (define (hit-something state)
   (let ((squares-with-mons
@@ -69,16 +103,6 @@
 ;  (string=? (item-name item) "food ration"))
 
 
-(define (update-seen-squares state)
-  (iterate-screen
-   (lambda (seed coord char color)
-     (if (not (or (seen? coord)
-		  (char=? char #\space)
-		  (char=? char #\I)))
-	 (mark-seen coord)))
-   #f
-   '(1 2) '(80 22)))
-
 (define (draw-seen state)
   (do ((y 1 (+ y 1)))
       ((= y 24))
@@ -90,92 +114,56 @@
 (define (update-map state)
   (iterate-screen
    (lambda (state coord char color)
-     (if (or (char=? char #\space)
-	     (char=? char #\I))
-	 state
-	 (let ((seen (seen? coord)))
-	   (if (not seen) (mark-seen coord))
-	   (cond
-	    ((and (eq? color 'blue)
-		  (char=? char #\{))
-	     (modify-state
+     (case char
+       ((#\space)
+	(if (square-covered-by-item? coord)
+	    (unmark-square-covered-by-item coord))
+	state)
+       ((#\I) state)
+       (else
+	(if (not (seen? coord))
+	    (mark-seen coord))
+	(cond
+	 ((and (eq? color 'blue)
+	       (char=? char #\{))
+	  (add-fountain state coord))
+	 ((and (door? coord)
+	       (square-clear? state coord))
+	  (unmark-door coord)
+	  state)
+	 ((item? state coord)
+	  (set-square-covered-by coord)
+	  (if (visited? coord)
 	      state
-	      'fountains (lambda (ls)
-			   (let ((entry (list (dlvl) coord)))
-			     (if (member entry ls)
-				 ls
-				 (cons entry ls))))))
-	    ((and (door? coord)
-		  (square-clear? state coord))
-	     (unmark-door coord)
-	     state)
-	    ((and (not (visited? coord))
-		  (item? state coord))
-	     (cons-state state 'interesting-squares coord))
-	    (else state)))))
-   state
-   '(1 2) '(80 22)))
+	      (cons-state state 'interesting-squares coord)))
+	 (else state)))))
+   state))
 
 (define (walk state)
-  (cond
-   ((get-state state 'going-to)
-    (go-to (set-state state 'explorer walk)
-	   (get-state state 'going-to)))
-   ((and (dead-end? state)
-	 (< (searched-for state (get-coord)) 15))
-    (search (set-state state 'explorer walk)))
-   (else
-;;     (let* ((interesting-stuff
-;; 	    (iterate-screen
-;; 	     (lambda (seed coord char color)
-;; 	       (if (not (or (seen? state coord)
-;; 			    (char=? char #\space)
-;; 			    (char=? char #\I)))
-;; 		   (mark-seen state coord))
-;; 	       (if (and (not (char=? char #\space))
-;; 			(not (visited? state coord))
-;; 			(item? state coord))
-;; 		   (cons coord seed)
-;; 		   seed))
-;; 	     '()))
-    (let* ((state (update-map
-		   (set-state
-		    state
-		    'explorer walk
-		    'interesting-squares '())))
-	   (paths
-	    (list-sort (lambda (a b) (< (length a) (length b)))
-		       (filter-map
-			(lambda (c)
-			  (find-path-towards state (get-coord) c))
-			(get-state state 'interesting-squares)))))
-      (let ((dest (and (not (null? paths))
-		       (last (car paths)))))
-	(if (or (not dest)
-		(> (length (car paths))
-		   (* 2 (min-distance (get-coord) dest))))
-	    (let ((next (new-nu state)))
-	      (if next
-		  (go-to state next)
-		  'done))
-	    (go-towards state dest)))))))
+  (if (and (dead-end? state)
+	   (< (searched-for state (get-coord)) 15))
+      (search state)
+      (let* ((paths
+	      (list-sort (lambda (a b) (< (length a) (length b)))
+			 (filter-map
+			  (lambda (c)
+			    (find-path-towards state (get-coord) c))
+			  (get-state state 'interesting-squares))))
+	     (dest (and (not (null? paths))
+			(last (car paths)))))
+      (if (not dest)
+	  (let ((next (new-nu state)))
+	    (if next
+		(push-action-go state
+				(lambda (state)
+				  (go-to state next)))
+		'done))
+	  (move state (map - (cadr (car paths)) (get-coord)))))))
 
 (define (handle-question state)
   (send-expect "\e" expect-generic)
   (display "opting out of question\n")
   state)
-
-(define (read-topl state)
-  (if (at-question?)
-      (read-topl (handle-question state))
-      (let ((state (set-state
-		    state
-		    'messages (append (reverse (read-messages))
-				      (get-state state 'messages)))))
-	(if (at-more?)
-	    (begin (send-expect " " expect-generic)
-		   (read-topl state))
-	    state))))
 
 (define (new-nu state)
   (define (p? c)
@@ -192,6 +180,12 @@
 	     ; explore other areas first if we don't know where
 	     ; we're pushing towards
 	     15)
+	    ((and (char=? (square-char to) #\#)
+		  (diagonal? dir))
+	     0.7) ; explore corridors first. Shorter.
+	    ((and (eq? (car (get-state state 'last-command)) 'move)
+		  (equal? dir (cadr (get-state state 'last-command))))
+	     0.9) ; prefer to walk in a straight line
 	    (else 1))))
   (let ((path (find-path state
 			 (get-coord)
@@ -202,53 +196,6 @@
 			 #f
 			 cost)))
     (and path (last path))))
-
-
-
-(define (nu state)
-  (define node-coord car)
-  (define node-cost cadr)
-  (define (cost to from)
-    (let ((dir (map - to from)))
-      (cond ((door? to) 3)
-	    ((bad-trap? state to) 25)
-	    ((and (boulder? to) (not (seen? (map + to dir))))
-	     ; explore other areas first if we don't know where we're pushing
-	     ; towards
-	     15)
-	    (else 1))))
-  (define (make-node c p)
-    (list c (if p
-		(+ (node-cost p) (cost c (node-coord p)))
-		0)))
-  (let loop ((open (list (make-node (get-coord) #f)))
-	     (closed '()))
-    (and (not (null? open))
-	 (let* ((current (node-coord (car open)))
-		(neighbors (neighbor-squares current)))
-	   (display "nu: examining ")
-	   (write (car open))
-	   (newline)
-	   (if (and (not (visited? current))
-		    (or (any (lambda (c) (not (seen? c))) neighbors)
-			(and (dead-end? state current)
-			     (< (searched-for state current) 15))))
-	       current
-	       (loop (list-merge
-		      (lambda (a b) (< (node-cost a) (node-cost b)))
-		      (cdr open)
-		      (filter-map
-		       (lambda (c)
-			 (and (not (member c closed))
-			      (passable? state c current)
-			      (let ((node (make-node c (car open)))
-				    (old (assoc c open)))
-				(and (or (not old)
-					 (< (node-cost node) (node-cost old)))
-				     node))))
-		       
-		       neighbors))
-		     (cons current closed)))))))
 
 (define go-towards
   (let ((path #f)
@@ -285,24 +232,25 @@
 (define go-to
   (let ((path #f))
     (lambda (state dest)
-      (if (not (and path
-		    (member (get-coord) path)
-		    (equal? (last path) dest)))
-	  (let ((new-path (find-path-to state (get-coord) dest)))
-	    (if (not new-path)
-		'path-not-found
-		(begin (set! path new-path)
-		       (go-to state dest))))
-	  (let* ((next-square
-		  (cadr (find-tail (specialize equal? (get-coord)) path)))
-		 (dir (map - next-square (get-coord))))
-	    (if (not (passable? state (get-coord) next-square))
-		(begin (set! path #f)
-		       (go-to state dest))
-		(move (set-state state
-				 'going-to (and (not (equal? next-square dest))
-						dest))
-		      dir)))))))
+      (cond ((equal? (get-coord) dest)
+	     (pop-action-go state))
+	    ((not (and path
+		       (member (get-coord) path)
+		       (equal? (last path) dest)))
+	     (let ((new-path (find-path-to state (get-coord) dest)))
+	       (if (not new-path)
+		   (pop-action-go (set-state state 'failure 'path-not-found))
+		   (begin (set! path new-path)
+			  (go-to state dest)))))
+	    (else
+	     (let* ((next (cadr (find-tail (specialize equal? (get-coord))
+					   path))))
+	       (cond ((monster? state next)
+		      (push-action-go state handle-blocker))
+		     ((not (passable? state (get-coord) next))
+		      (begin (set! path #f)
+			     (go-to state dest)))
+		     (else (move state (map - next (get-coord)))))))))))
 
 (define (get-room-extents state)
   (define (extend coord dir)
@@ -389,4 +337,55 @@
 	    (newline)
 	    (loop (+ y 1)))))))
 
+(define (corpse-yummy? state mon) #t)
 
+(define (maybe-eat state)
+  (let ((objects (get-state state 'objects-here))
+	(nutrition (get-state state 'nutrition)))
+    (or (and (get-state state 'corpses)
+	     objects
+	     (not (null? objects))
+	     (< nutrition 800)
+	     (let ((cutoff (- (turns) 40))
+		   (x (assoc (get-coord) (get-state state 'corpses))))
+	       (and x
+		    (> (caddr x) cutoff)
+		    (corpse-yummy? state (cadr x))
+		    (any (lambda (item)
+			   (let ((mon (item-corpse-of item)))
+			     (and mon (string=? (cadr x) mon))))
+			 objects)
+		    (eat-from-floor state
+				    (lambda (item)
+				      (let ((c (item-corpse-of item)))
+					(and c (string=? c (cadr x)))))))))
+	(continue-action state))))
+
+(define (push-action state . ls)
+  (set-state state
+	     'action
+	     (append (reverse ls) (or (get-state state 'action) '()))))
+
+(define (push-action-go state . ls)
+  ((last ls)
+   (apply push-action state ls)))
+
+(define (pop-action state)
+  (set-state state
+	     'action
+	     (let ((action (get-state state 'action)))
+	       (if (or (not action)
+		       (null? action))
+		   '()
+		   (cdr action)))))
+
+(define (pop-action-go state)
+  (let* ((s (pop-action state))
+	 (f (car (get-state s 'action))))
+    (f s)))
+
+(define (continue-action state)
+  ((car (get-state state 'action)) state))
+
+(define (handle-blocker state)
+  'handle-blocker)

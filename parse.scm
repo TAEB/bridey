@@ -1,11 +1,3 @@
-; need to import regexps wholesale... mind the massive namespace pollution.
-
-(define page-num (sequence (text "(")
-			   (submatch 'cur (repeat 1 #f numeric))
-			   (text " of ")
-			   (submatch 'total (repeat 1 #f numeric))
-			   (text ")")))
-
 (define (match-before-cur? str)
   (let ((len (string-length str)))
     (and (> (car (get-coord)) len)
@@ -17,6 +9,7 @@
 	   (and (term-match-string? "Call " '(1 1))
 		(match-before-cur? ": "))
 	   (match-before-cur? " [yn] (n) ")
+	   (match-before-cur? " [ynq] (n) ")
 	   (match-before-cur? " [ynaq] (y) ")
 	   ; more prompt types?
 	   )))
@@ -57,17 +50,9 @@
   (or (match-before-cur? "(end) ")
       (menu-page/page)))
 
-(define (at-last-page?) ; of a menu
-  (let* ((s (get-row-plaintext (cadr (get-coord))))
-	 (m (match page-num s)))
-    (if (not m)
-	(display "scraper: missing pager!\n"))
-    (let* ((sm (match-submatches m))
-	   (cur-m (cdr (assq 'cur sm)))
-	   (total-m (cdr (assq 'total sm)))
-	   (cur (substring s (match-start cur-m) (match-end cur-m)))
-	   (total (substring s (match-start total-m) (match-end total-m))))
-      (string=? cur total))))
+(define (at-last-page?)
+  (let ((x (menu-page/page)))
+    (and x (apply = x))))
 
 (define (read-messages)
   (define (join ls)
@@ -120,3 +105,6 @@
   (list (string-ref str 0)
 	(string-drop str 4)))
 
+(define (chop-punct str)
+  (or (string-drop-suffix "." str)
+      (string-drop-suffix "!" str)))

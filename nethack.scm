@@ -4,13 +4,30 @@
 (define send-expect #f)
 (define read-expect #f)
 
-(define (char-selection)
-  (string-for-each
-   (lambda (c)
-     (send-expect (string c) expect-generic))
-   "nbhmc "))
+(define (char-selection char)
+  (let ((role (case (car char)
+		((archeologist) "a") ((barbarian) "b") ((caveman) "c")
+		((healer) "h") ((knight) "k") ((monk) "m")
+		((priest) "p") ((rogue) "r") ((ranger) "R")
+		((samurai) "s") ((tourist) "t") ((valkyrie) "v")
+		((wizard) "w")))
+	(race (case (cadr char)
+		((human) "h") ((elf) "e") ((dwarf) "d")
+		((gnome) "g") ((orc) "o")))
+	(sex (case (caddr char)
+	       ((male) "m") ((female) "f")))
+	(alignment (case (cadddr char)
+		     ((lawful) "l") ((neutral) "n") ((chaotic) "c"))))
+    (send-expect role expect-generic)
+    (if (string-contains (get-row-plaintext 1) "Pick the race")
+	(send-expect race expect-generic))
+    (if (string-contains (get-row-plaintext 1) "Pick the gender")
+	(send-expect sex expect-generic))
+    (if (string-contains (get-row-plaintext 1) "Pick the alignment")
+	(send-expect alignment expect-generic))
+    (send-expect " " expect-generic)))
 
-(define (nethack-init)
+(define (nethack-init char)
   (if nao?
       (begin (set! read-expect telnet-read-expect)
 	     (set! send-expect telnet-send-expect)
@@ -21,7 +38,8 @@
   (read-expect
    (lambda (res tries)
      (cond ((match-before-cur? "for you? [ynq] ")
-	    (char-selection))
+	    (send-expect "n" expect-menu)
+	    (char-selection char))
 	   ((match-before-cur? "Restoring save file...--More--")
 	    (send-expect " " expect-generic))
 	   ((string-prefix? "There are some stale nethack processes"
@@ -29,6 +47,11 @@
 	    (system "sleep 10")
 	    #f)
 	   (else #f)))))
+
+(define (nethack-end)
+  (if nao?
+      (telnet-end)
+      (pty-end)))
 
 (define (nethack-redraw)
   (term-init)

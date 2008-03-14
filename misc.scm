@@ -88,3 +88,31 @@
 
 (define (char->control-string char)
   (string (char->control char)))
+
+(define (range start finish)
+  (iota (+ (- finish start) 1) start 1))
+
+(define (reverse-range start finish)
+  (iota (+ (- start finish) 1) start -1))
+
+(define (string-drop-prefix pre str)
+  (and (string-prefix? pre str)
+       (string-drop str (string-length pre))))
+
+(define (string-drop-suffix suf str)
+  (and (string-suffix? suf str)
+       (string-drop-right str (string-length suf))))
+
+; nethack uses American English
+(define (char-vowel? c)
+  (case (char-downcase c)
+    ((#\a #\e #\i #\o #\u) #t)
+    (else #f)))
+
+(define (identity x) x)
+
+(define (delete-first p ls)
+  (cond ((null? ls) '())
+	((p (car ls)) (cdr ls))
+	(cons (car ls)
+	      (delete-first (cdr ls)))))

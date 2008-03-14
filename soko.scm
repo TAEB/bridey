@@ -224,9 +224,7 @@
 		       (min (cadr coord) (cadr min-coord)))
 		 (list (max (car coord) (car max-coord))
 		       (max (cadr coord) (cadr max-coord)))))))
-   '((80 24) (1 1))
-   '(1 2)
-   '(80 22)))
+   '((80 24) (1 1))))
 
 (define (iterate-layout f layout seed)
   (let ((dimensions (get-layout-dimensions layout)))
@@ -412,18 +410,14 @@
 		    (let* ((p (find-path-soko state (get-coord) next #f #f))
 			   (sq (and p (cadr p))))
 		      (if sq
-			  (move (set 'explorer solve-soko) (map - sq (get-coord)))
+			  (move state (map - sq (get-coord)))
 			  ; try to wait for it. monsters can move diagonally
 			  ; between boulders, right?
 			  (if (and (find-path-soko-monster state next (get-coord))
 				   (< (get 'soko-waited) 12))
 			      (wait (set 'soko-waited (+ (get 'soko-waited) 1)))
 			      'throw-crap)))
-		    (move (set 'soko-path path
-			       'explorer solve-soko)
-			  dir)))
+		    (move (set 'soko-path path) dir)))
 	       (else
 		(let ((sq (next-step state standing)))
-		  (move (set 'soko-path path
-			     'explorer solve-soko)
-			(map - sq (get-coord)))))))))))
+		  (move (set 'soko-path path) (map - sq (get-coord)))))))))))

@@ -1,6 +1,3 @@
-; This thing really should go in its own modules, but depending on bridey-lib
-; makes this weird...
-
 (define table #f)
 
 (define num-entries 0)
@@ -47,7 +44,8 @@
 	(mark-closed-door
 	 (map + (get 'expected-coord) (cadr (get 'last-command)))))
     state)
-   (("As you kick the door, it crashed open!")
+   (("As you kick the door, it crashed open!"
+     "You kick at empty space.")
     (if (same-level? state)
 	(let ((c (map + (get 'expected-coord) (cadr (get 'last-command)))))
 	  (unmark-door c)
@@ -67,16 +65,19 @@
 	(set 'do-look? #t)
 	(set 'thrones (assoc-replace (list (dlvl) (get-coord))
 				     get 'thrones))))
-   (("You try to move the boulder, but in vain.")
-    (let* ((last (get 'last-command))
-	   (command (car last))
-	   (dir (cadr last)))
-      (if (not (eq? command 'move))
-	  (begin (display "huh?\n") state)
-	  (set 'stuck-boulders (cons (list (get 'expected-coord) dir)
-				     (get 'stuck-boulders))))))
    (("There is a doorway here.")
     state) ; TODO
+
+   (("There are several objects here." "There are several more objects here."
+     "There are many objects here." "There are many more objects here.")
+    (if (weird-position? state)
+	(set 'do-look? #t)
+	(set 'maybe-pickup? #t)))
+
+   (("You see no objects here." "You feel no objects here.")
+    (if (weird-position? state)
+	state
+	(set 'objects-here '())))
 
 					; status messages
    (("You feel confused." "Huh, What?" "You feel somewhat dizzy."
@@ -254,10 +255,10 @@
    (("You triggered your land mine!" "You triggered the land mine!")
     (state-mark-trap (set 'injured? #t) 'pit))
    (("You fall into a pit!" "You fall into your pit!" "There is a pit here.")
-    (state-mark-trap (set 'in-pit? #t) 'pit))
+    (state-mark-trap (set 'in-trap? #t) 'pit))
    (("You land on a set of sharp iron spikes!" "There is a spiked pit here.")
     (state-mark-trap state 'spiked-pit))
-   (("You crawl to the edge of the pit.") (set 'in-pit? #f))
+   (("You crawl to the edge of the pit.") (set 'in-trap? #f))
    (("There's a gaping hole under you!")
     (mark-trap (get 'expected-coord))
     (set 'traps (assoc-replace (list (get 'expected-coord) 'hole)
@@ -295,12 +296,13 @@
      "There is a sleeping gas trap here." "You escape a sleeping gas trap."
      "You are enveloped in a cloud of gas!")
     (state-mark-trap state 'sleeping-gas))
-   (("A beartrap closes on your foot!" "Your beartrap closes on your foot!"
-     "You escape a beartrap." "There is a beartrap here."
-     "A beartrap closes harmlessly over you."
-     "Your beartrap closes harmlessly over you."
-     "You float over the beartrap." "You float over the beartrap."
-     "You fly over the beartrap." "You fly over your beartrap.")
+   (("A bear trap closes on your foot!" "Your bear trap closes on your foot!")
+    (state-mark-trap (set-state 'in-trap? #t) 'beartrap))
+   (("You escape a bear trap." "There is a bear trap here."
+     "A bear trap closes harmlessly over you."
+     "Your bear trap closes harmlessly over you."
+     "You float over the bear trap." "You float over the bear trap."
+     "You fly over the bear trap." "You fly over your bear trap.")
     (state-mark-trap state 'beartrap))
    (("You escape a land mine." "You escape your land mine."
      "There is a land mine here."
@@ -317,17 +319,46 @@
     state)))
 
 (define (process-message msg state)
+  (define get (specialize get-state state))
+  (define set (specialize set-state state))
   (if (not table)
       (begin
 	(set! table (make-string-table))
 	(populate)))
-  (let ((f (table-ref table msg)))
-    (if f
-	(f state)
-	(cond
-	 ((inventory-item? msg)
-	  (cons-state state 'inventory (split-inventory-item msg)))
-	 ; engravings
-	 (else state)))))
+  (cond
+   ((table-ref table msg)
+    => (lambda (f)
+	 (f state)))
+   ((inventory-item? msg)
+    (cons-state state 'inventory (split-inventory-item msg)))
+   ((string-drop-prefix "You kill the " msg)
+    => (lambda (mon)
+	 (maybe-add-corpse state (chop-punct mon))))
+   ((or (string-drop-prefix "You see here " msg)
+	(string-drop-prefix "You feel here " msg))
+    => (lambda (item)
+	 (set 'objects-here (list (chop-punct item)))))
+   ((string-drop-prefix "You finish eating " msg)
+    => (lambda (food)
+	 (let* ((item (chop-punct food))
+		(nutrition (item-nutrition item)))
+	   (if (eq? (car (get 'last-command)) 'eat-from-floor)
+	       (set 'nutrition nutrition
+		    'objects-here (delete-first
+				   (lambda (x)
+				     (string=? (item-name item)
+					       (item-name x)))
+				   (get 'objects-here))
+		    'corpses (if (item-corpse? item)
+				 (remove (lambda (x)
+					   (and (equal? (get-coord) (car x))
+						(string=? (item-corpse-of item)
+							  (cadr x))))
+					 (get 'corpses))
+				 (get 'corpses)))
+	       (decrement-item
+		(set 'nutrition nutrition)
+		(cadr (get 'last-command)))))))
+   (else state)))
 
 

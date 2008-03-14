@@ -83,6 +83,18 @@
       (submatch 'turns num)
       (repeat whitespace))))
 
+(define (botl-visible?)
+  (call/cc
+   (lambda (exit)
+     (iterate-screen
+      (lambda (seed coord char color)
+	(if (not (char=? char #\space))
+	    (exit #t)
+	    seed))
+      #f
+      '(1 24)
+      '(15 24)))))
+
 (define (botl-update)
   (define (get-string m str)
     (substring str (match-start m) (match-end m)))
