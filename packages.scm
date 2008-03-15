@@ -1,9 +1,10 @@
 (define-structure bridey-lib
-  (export process-turn move fight search wait go-towards go-to)
+  (export process-turn move fight search wait go-towards go-to
+	  push-action push-action-go)
   (open scheme srfi-1 srfi-2 srfi-13 byte-vectors sorting
 	nethack item monster messages pathfinding state misc term botl
 	utilities scraper parse)
-  (files bridey-lib commands sweep))
+  (files bridey-lib commands walls))
 
 (define-structure messages
   (export process-message)
@@ -51,7 +52,7 @@
 	 (data item-japanese)))
 
 (define-structure pathfinding
-  (export find-path find-path-to find-path-towards)
+  (export find-path find-path-to find-path-towards find-path-hard)
   (open scheme srfi-1 sorting
 	console scraper utilities term misc)
   (files pathfinding))

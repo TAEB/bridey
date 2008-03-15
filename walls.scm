@@ -87,18 +87,67 @@
 
 (define (walls-to-search state)
   (define (ranked-walls vert?)
-    (let ((walls
-	   (apply append
-		  (map (lambda (x/y)
-			 (find-walls state x/y vert?))
-		       (if vert?
-			   (range 1 80)
-			   (range 2 22))))))
-      (map (lambda (wall)
-	     (list wall (wall-score (grow-wall wall vert?) vert?)))
-	   walls)))
+    (map (lambda (wall)
+	   (list wall (wall-score (grow-wall wall vert?) vert?)))
+	 (apply append
+		(map (lambda (x/y)
+		       (find-walls state x/y vert?))
+		     (if vert?
+			 (range 1 80)
+			 (range 2 22))))))
   (map car
        (list-sort (lambda (a b)
 		    (> (cadr a) (cadr b)))
 		  (append (ranked-walls #t)
 			  (ranked-walls #f)))))
+
+(define (wall-get-inner state wall)
+  (let* ((dir (map - (cadr wall) (car wall)))
+	 (disp (map abs (reverse dir))))
+    (let ((side (map (lambda (c) (map + c disp)) wall)))
+      (if (every seen? side)
+	  side
+	  (let ((side (map (lambda (c) (map - c disp)) wall)))
+	    (if (every seen? side)
+		side
+		'wall-get-inner-missed))))))
+
+(define (search-walls state)
+  (let* ((current (get-state state 'wall-searching))
+	 (walls (get-state state 'walls-to-search)))
+    (cond ((not walls)
+	   (search-walls
+	    (set-state state 'walls-to-search (walls-to-search state))))
+	  ((not current)
+	   (if (null? walls)
+	       (pop-action-go (set-state state 'searched-walls #t))
+	       (let* ((inner (wall-get-inner state (car walls)))
+		      (a (find-path-hard state (get-coord) (car inner)))
+		      (b (find-path-hard state (get-coord) (last inner))))
+		 (search-walls (set-state
+				state
+				'walls-to-search (cdr walls)
+				'wall-searching (if (< (length a) (length b))
+						    inner
+						    (reverse inner)))))))
+	  ((and (< (searched-for state (get-coord)) 23)
+		(member (get-coord) current))
+	   (search state))
+	  (else
+	   (let ((rest (remove (specialize adjacent? (get-coord)) current))
+		 (p (specialize find-path-to state (get-coord))))
+	     (if (and (> (length rest) 1)
+		      (p (cadr rest)))
+		 (push-action-go (set-state state 'wall-searching rest)
+				 (lambda (state) (go-to state (cadr rest))))
+		 (let loop ((rest rest))
+		   (cond ((null? rest)
+			  (search-walls (set-state state 'wall-searching #f)))
+			 ((p (car rest))
+			  (push-action-go
+			   (set-state state 'wall-searching rest)
+			   (lambda (state) (go-to state (car rest)))))
+			 (else (loop (cdr rest)))))))))))
+		   
+		  
+	  

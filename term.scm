@@ -62,7 +62,7 @@
 (define (iterate-screen f seed . opt)
   ; defaults to '(1 2) and '(80 22)
   (let ((start (if (null? opt) 80 (coord->i (car opt))))
-	(end (if (null? opt) 1795 (coord->i (cadr opt)))))
+	(end (if (null? opt) 1759 (coord->i (cadr opt)))))
     (let loop ((i start)
 	       (s seed))
       (if (> i end)

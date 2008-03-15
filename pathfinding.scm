@@ -26,6 +26,18 @@
 	     #f
 	     standard-cost))
 
+(define (find-path-hard state start goal)
+  (find-path state
+	     start
+	     (specialize equal? goal)
+	     (make-standard-heuristic goal)
+	     (lambda x #t)
+	     #f
+	     (lambda (state from to)
+	       (if (passable? state from to)
+		   (standard-cost state from to)
+		   10))))
+
 ; include dark squares
 (define (find-path-towards state start goal)
   (find-path state

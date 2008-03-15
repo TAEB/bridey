@@ -333,7 +333,7 @@
 				  (item-quantity b)))))
 
 (define (item-adjust-quantity item n)
-  (and (> n 1)
+  (and (>= n 1) ; "1 daggers" is okay. we don't care.
        (item-quantity item)
        (let ((m (cdr (get-submatch item 'number #f))))
 	 (string-append (substring item 0 (match-start m))

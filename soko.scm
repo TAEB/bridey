@@ -218,12 +218,12 @@
    (lambda (seed coord char color)
      (if (char=? char #\space)
 	 seed
-	 (let ((min-coord (car seed))
-	       (max-coord (cadr seed)))
-	   (list (list (min (car coord) (car min-coord))
-		       (min (cadr coord) (cadr min-coord)))
-		 (list (max (car coord) (car max-coord))
-		       (max (cadr coord) (cadr max-coord)))))))
+	 (apply (lambda (min-coord max-coord)
+		  (list (list (min (car coord) (car min-coord))
+			      (min (cadr coord) (cadr min-coord)))
+			(list (max (car coord) (car max-coord))
+			      (max (cadr coord) (cadr max-coord)))))
+		seed)))
    '((80 24) (1 1))))
 
 (define (iterate-layout f layout seed)
