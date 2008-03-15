@@ -13,9 +13,9 @@ my $lis_sock = IO::Socket::INET->new(
 
 $|++;
 
-open PORT, ">port";
-print PORT $lis_sock->sockport;
-close PORT;
+open my $port_handle, ">port";
+print $port_handle $lis_sock->sockport;
+close $port_handle;
 
 my $sock = $lis_sock->accept;
 
