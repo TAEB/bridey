@@ -5,8 +5,12 @@ use warnings;
 use IO::Pty::Easy;
 use IO::Socket;
 
-my $lis_sock = IO::Socket::INET->new(Listen => 1, LocalAddr => 'localhost',
-                                 Proto => 'tcp');
+my $lis_sock = IO::Socket::INET->new(
+    Listen    => 1,
+    LocalAddr => 'localhost',
+    Proto     => 'tcp',
+);
+
 $|++;
 
 open PORT, ">port";
@@ -18,9 +22,8 @@ my $sock = $lis_sock->accept;
 my $pty = IO::Pty::Easy->new;
 $pty->spawn("nethack -D");
 
-for (;;)
+while ($pty->is_active)
 {
-    last unless $pty->is_active;
     my $out = $pty->read(0.08);
     if (defined($out))
     {
