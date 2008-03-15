@@ -33,7 +33,7 @@
     ((13) 'bright-magenta)
     ((14) 'bright-cyan)
     ((15) 'white)
-    (else 'ultraviolet)))
+    (else 'octarine)))
 
 (define (buf-char i)
   (let ((n (byte-vector-ref buf i)))
