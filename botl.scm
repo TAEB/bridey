@@ -20,8 +20,6 @@
 (define (botl-get key)
   (cadr (assq key data)))
 
-(define last-line23 "")
-
 (define bot1
   (sequence
     (text "St:")
@@ -96,29 +94,28 @@
       '(15 24)))))
 
 (define (botl-update)
-  (define (get-string m str)
-    (substring str (match-start m) (match-end m)))
-  (define (proc key value)
-    (case key
-      ((align) (botl-set! 'align value))
-      ((str) (if (not (string-prefix? "18/" value))
-		 (botl-set! 'str (string->number value))))
-      ((str-18) (botl-set! 'str
-			   (if (string=? value "**")
-			       19
-			       (exact->inexact
-				(+ 18 (/ (string->number value) 100))))))
-      ((branch) #f)
-      (else (botl-set! key (string->number value)))))
-  (define (match-line regex str)
-    (let ((m (match regex str)))
-      (and m
-	   (for-each (lambda (e)
-		       (proc (car e) (get-string (cdr e) str)))
-		     (match-submatches m)))))
-  (let ((line23 (get-row-plaintext 23))
-	(line24 (get-row-plaintext 24)))
-    (if (not (string=? last-line23 line23))
-	(begin (match-line bot1 line23)
-	       (set! last-line23 line23)))
-    (match-line bot2 line24)))
+  (call/cc
+   (lambda (ret)
+     (define (foreach-botl regex str)
+       (for-each
+	(lambda (submatch)
+	  (let ((key (car submatch))
+		(value (substring str
+				  (match-start (cdr submatch))
+				  (match-end (cdr submatch)))))
+	    (case key
+	      ((align) (botl-set! 'align value))
+	      ((str) (if (not (string-prefix? "18/" value))
+			 (botl-set! 'str (string->number value))))
+	      ((str-18) (botl-set!
+			 'str
+			 (if (string=? value "**")
+			     19
+			     (exact->inexact
+			      (+ 18 (/ (string->number value) 100))))))
+	      ((branch) #f)
+	      (else (botl-set! key (string->number value))))))
+	(cond ((match regex str) => match-submatches)
+	      (else (ret #f)))))
+     (foreach-botl bot1 (get-row-plaintext 23))
+     (foreach-botl bot2 (get-row-plaintext 24)))))

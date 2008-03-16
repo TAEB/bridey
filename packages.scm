@@ -133,7 +133,7 @@
 	  align score dlvl gold
 	  curhp maxhp curpw maxpw
 	  ac xlvl xp turns)
-  (open scheme srfi-13 regexps
+  (open scheme srfi-1 srfi-13 regexps
 	misc term)
   (files botl))
 
