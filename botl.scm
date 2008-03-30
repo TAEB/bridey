@@ -104,6 +104,10 @@
 				  (match-start (cdr submatch))
 				  (match-end (cdr submatch)))))
 	    (case key
+	      ((aling) (cond ((string=? value "Lawful") 'lawful)
+			     ((string=? value "Neutral") 'neutral)
+			     ((string=? value "Chaotic") 'chaotic)
+			     (else 'wtf-man)))
 	      ((align) (botl-set! 'align value))
 	      ((str) (if (not (string-prefix? "18/" value))
 			 (botl-set! 'str (string->number value))))

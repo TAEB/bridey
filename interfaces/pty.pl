@@ -20,7 +20,7 @@ close $port_handle;
 my $sock = $lis_sock->accept;
 
 my $pty = IO::Pty::Easy->new;
-$pty->spawn("nethack -D");
+$pty->spawn("nethack -u bridey -D");
 
 while ($pty->is_active)
 {

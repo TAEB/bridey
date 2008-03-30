@@ -1,23 +1,16 @@
 (define (initial-state char)
   (set-state
    (create-level '())
+   'action (list identity)
    'nutrition 900
    'encumbrance 0
    'last-command '(#f #f)
    'do-inventory? #t
    'fountains '()
    'thrones '()
-   'interesting-squares '()
    'question-handler handle-question
-   'pickup-pred (lambda (x) #f)))
-
-(define (create-level state)
-  (set-state
-   state
-   'searched (make-byte-vector (* 80 24) 0)
-   'stuck-boulders '()
-   'rooms '()
-   'searched-walls '()))
+   'pickup-pred (lambda (x) #f)
+   'level-info (make-vector 91 #f)))
 
 (define (process-turn state)
   ; need a macro for this :)
@@ -131,8 +124,8 @@
 	       (square-clear? state coord))
 	  (unmark-door coord)
 	  state)
-	 ((item? state coord)
-	  (set-square-covered-by coord)
+	 ((or (and (item? state coord)
+		   (set-square-covered-by coord)))
 	  (if (visited? coord)
 	      state
 	      (cons-state state 'interesting-squares coord)))
@@ -389,3 +382,6 @@
 
 (define (handle-blocker state)
   'handle-blocker)
+
+;(define (go-down-and-up state)
+;  (

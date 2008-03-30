@@ -60,6 +60,14 @@
 (define (square-inverse? coord)
   (bit-set? (map-bv-ref colors coord) inverse-bit))
 
+(define (square-glyph-dir dir)
+  (square-glyph (map + (get-coord) dir)))
+
+(define (square-glyph coord)
+  (let ((i (coord->i coord)))
+    (list (num->color (unset-bit (byte-vector-ref colors i) inverse-bit))
+	  (buf-char i))))
+
 (define (iterate-screen f seed . opt)
   ; defaults to '(1 2) and '(80 22)
   (let ((start (if (null? opt) 80 (coord->i (car opt))))

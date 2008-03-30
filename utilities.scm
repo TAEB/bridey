@@ -268,9 +268,8 @@
 (define (unmark-embedded c) (square-info-unset 6 c))
 
 (define (wall? coord)
-  (and (eq? (square-color coord) 'black)
-       (or (char=? (square-char coord) #\|)
-	   (char=? (square-char coord) #\-))))
+  (member (square-glyph coord)
+	  '((none #\|) (none #\-))))
 
 (define (searched-for state coord)
   (map-bv-ref (get-state state 'searched) coord))
@@ -337,3 +336,50 @@
     ((neutral) 0)
     ((chaotic) -1)
     (else #f)))
+
+(define (create-level state)
+  (set-state
+   state
+   'searched (make-byte-vector (* 80 24) 0)
+   'stuck-boulders '()
+   'rooms '()
+   'searched-walls '()
+   'branch 'doom
+   'interesting-squares '()))
+
+(define (load-level state branch lvl)
+  (define (get-level state branch lvl)
+    (vector-ref (get-state state 'level-info)
+		(+ lvl
+		   (case branch
+		     ((doom) 0) ; 0-53
+		     ((mines) 54) ; 54-63
+		     ((soko) 64) ; 64-67
+		     ((home) 68) ; 68-73
+		     ((ludios) 74) ; 74
+		     ((vlad) 75) ; 75-77
+		     ((planes) 76) ; 76-80
+		     ((unknown) 81))))) ; 81-90
+  (define (copy-state from to ls)
+    (fold (lambda (name new)
+	    (set-state new name (get-state from name)))
+	  to
+	  ls))
+  (let ((old (get-level state
+			(get-state state 'branch)
+			(or (dlvl) (get-state state 'dlvl))))
+	(new (get-level state branch lvl))
+	(states '(branch searched stuck-boulders searched-walls rooms
+		  interesting-squares)))
+    ; pair of state, square-info. for now
+    (set-car! old (copy-state state '() states))
+    (set-cdr! old square-info)
+    (if new
+	(set! square-info (cdr new))
+	(square-info-init))
+    (if new
+	(copy-state (car new) state states)
+	(create-level state))))
+
+
+

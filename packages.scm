@@ -78,7 +78,8 @@
 	  square-covered-by-item? set-square-covered-by
 	  square-covered-match-current? unmark-square-covered-by-item
 	  mark-all-corridors-seen
-	  maybe-add-corpse add-fountain decrement-item)
+	  maybe-add-corpse add-fountain decrement-item
+	  create-level)
   (open scheme srfi-1 srfi-13 byte-vectors
 	monster item term state botl misc scraper parse)
   (files utilities))
@@ -87,8 +88,8 @@
   (export term-init term-process
 	  get-row-plaintext term-match-string?
 	  iterate-screen get-coord
-	  square-char square-color square-inverse?
-	  square-char-dir square-color-dir square-inverse-dir?
+	  square-char square-color square-inverse? square-glyph
+	  square-char-dir square-color-dir square-inverse-dir? square-glyph-dir
 	  term-find-symbol)
   (open scheme srfi-1 ascii byte-vectors bitwise
 	console misc)
