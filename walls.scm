@@ -150,4 +150,35 @@
 			 (else (loop (cdr rest)))))))))))
 		   
 		  
-	  
+
+
+(define (wall-curved? coord)
+  (define (straight-neighbors c)
+    (filter wall?
+	    (map (lambda (dir) (map + c dir))
+		 '((0 -1) (1 0) (0 1) (-1 0)))))
+  (define (diagonal-neighbors c)
+    (filter wall?
+	    (map (lambda (dir) (map + c dir))
+		 '((1 -1) (1 1) (-1 1) (-1 -1)))))
+  (define (knights-move? a b)
+    (member (map abs (map - a b))
+	    '((1 2) (2 1))))
+  (let ((char (square-char coord)))
+    (or (any (lambda (c)
+	       (equal? (square-char c) char))
+	     (diagonal-neighbors coord))
+	(let loop ((cur coord)
+		   (last coord))
+	  (let ((cur-char (square-char cur)))
+	    (and (<= (min-distance cur coord) 2)
+		 (or (and (knights-move? cur coord)
+			  (char=? cur-char #\|)
+			  (char=? char #\|))
+		     (and (equal? (map abs (map - cur coord)) '(2 2))
+			  (char=? cur-char #\-)
+			  (char=? char #\-))
+		     (let ((ls (delete last (straight-neighbors cur))))
+		       (and (= (length ls) 1)
+			    (loop (car ls)
+				  cur))))))))))
