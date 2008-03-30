@@ -70,7 +70,7 @@
 (define (square-clear? state coord)
   (case (square-char coord)
     ((#\. #\{ #\^ #\{#\{#\\) #t)
-    ((#\# #\_ #\") (eq? (square-color coord) 'black))
+    ((#\# #\_ #\") (eq? (square-color coord) 'none))
     (else #f)))
 
 (define (engulfed?)

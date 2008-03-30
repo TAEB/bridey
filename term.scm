@@ -18,7 +18,7 @@
 
 (define (num->color n)
   (case n
-    ((0)  'black)
+    ((0)  'none)
     ((1)  'red)
     ((2)  'green)
     ((3)  'brown)
@@ -26,6 +26,7 @@
     ((5)  'magenta)
     ((6)  'cyan)
     ((7)  'gray)
+    ((8)  'black) ; light black, shows as dark gray. use_darkgray patch.
     ((9)  'orange)
     ((10) 'bright-green)
     ((11) 'yellow)

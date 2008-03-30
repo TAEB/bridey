@@ -265,7 +265,7 @@
 		 (c (map + coord dir))
 		 (last coord))
 	(cond ((or (and (char=? (square-char c) wall-char)
-			(eq? (square-color c) 'black))
+			(eq? (square-color c) 'none))
 		   (and (char=? (square-char c) door-char)
 			(eq? (square-color c) 'brown)))
 	       n)
