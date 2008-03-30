@@ -106,8 +106,8 @@
 
 (define (update-map state)
   (iterate-screen
-   (lambda (state coord char color)
-     (case char
+   (lambda (state coord glyph)
+     (case (cadr glyph)
        ((#\space)
 	(if (square-covered-by-item? coord)
 	    (unmark-square-covered-by-item coord))
@@ -117,15 +117,18 @@
 	(if (not (seen? coord))
 	    (mark-seen coord))
 	(cond
-	 ((and (eq? color 'blue)
-	       (char=? char #\{))
+	 ((equal? glyph '(blue #\{))
 	  (add-fountain state coord))
 	 ((and (door? coord)
 	       (square-clear? state coord))
 	  (unmark-door coord)
 	  state)
 	 ((or (and (item? state coord)
-		   (set-square-covered-by coord)))
+		   (set-square-covered-by coord))
+	      (member glyph
+		      '((none #\_)
+			(none #\>)
+			(none #\<))))
 	  (if (visited? coord)
 	      state
 	      (cons-state state 'interesting-squares coord)))

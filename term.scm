@@ -79,16 +79,14 @@
 	  (loop (+ i 1)
 		(f s
 		   (i->coord i)
-		   (buf-char i)
-		   (num->color (unset-bit (byte-vector-ref colors i)
-					  inverse-bit))))))))
+		   (list (num->color (unset-bit (byte-vector-ref colors i)
+						inverse-bit))
+			 (buf-char i))))))))
 
-(define (term-find-symbol find-char find-color . opt)
+(define (term-find-symbol find-glyph . opt)
   (let ((ls (apply iterate-screen
-		   (lambda (ls coord char color)
-		     (if (and (char=? find-char char)
-			      (or (not find-color)
-				  (eq? find-color color)))
+		   (lambda (ls coord glyph)
+		     (if (equal? glyph find-glyph)
 			 (cons coord ls)
 			 ls))
 		   '()

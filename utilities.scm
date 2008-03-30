@@ -276,8 +276,8 @@
 
 (define (mark-all-corridors-seen)
   (iterate-screen
-   (lambda (seed coord char color)
-     (if (char=? char #\#)
+   (lambda (seed coord glyph)
+     (if (equal? glyph '(none #\#))
 	 (for-each mark-seen (neighbor-squares coord))))
    #f))
 

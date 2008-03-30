@@ -215,8 +215,8 @@
 
 (define (get-total-extents)
   (iterate-screen
-   (lambda (seed coord char color)
-     (if (char=? char #\space)
+   (lambda (seed coord glyph)
+     (if (char=? (cadr glyph) #\space)
 	 seed
 	 (apply (lambda (min-coord max-coord)
 		  (list (list (min (car coord) (car min-coord))

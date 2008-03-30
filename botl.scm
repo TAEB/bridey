@@ -85,8 +85,8 @@
   (call/cc
    (lambda (exit)
      (iterate-screen
-      (lambda (seed coord char color)
-	(if (not (char=? char #\space))
+      (lambda (seed coord glyph)
+	(if (not (char=? (cadr glyph) #\space))
 	    (exit #t)
 	    seed))
       #f
