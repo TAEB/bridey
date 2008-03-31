@@ -18,8 +18,8 @@
     (if (eof-object? len)
 	len
 	(let ((str (readn (car len))))
-	  (term-process str)
-	  str))))
+	  (begin (term-process str)
+		 str)))))
 
 (define (read-more)
   (write-char (integer->char 0) out)

@@ -85,7 +85,7 @@
   (files utilities))
 	
 (define-structure term
-  (export term-init term-process
+  (export term-init term-process term-got-partial?
 	  get-row-plaintext term-match-string?
 	  iterate-screen get-coord
 	  square-char square-color square-inverse? square-glyph

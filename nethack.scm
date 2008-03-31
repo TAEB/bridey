@@ -37,16 +37,17 @@
 	     (pty-init)))
   (read-expect
    (lambda (res tries)
-     (cond ((match-before-cur? "for you? [ynq] ")
-	    (send-expect "n" expect-menu)
-	    (char-selection char))
-	   ((match-before-cur? "Restoring save file...--More--")
-	    (send-expect " " expect-generic))
-	   ((string-prefix? "There are some stale nethack processes"
-			    (get-row-plaintext 3))
-	    (system "sleep 10")
-	    #f)
-	   (else #f)))))
+     (or (expect-generic res tries)
+	 (and (string-prefix? "There are some stale nethack processes"
+			      (get-row-plaintext 3))
+	      (system "sleep 10")
+	      #f))))
+  (cond ((match-before-cur? "for you? [ynq] ")
+	 (send-expect "n" expect-menu)
+	 (char-selection char))
+	((match-before-cur? "Restoring save file...--More--")
+	 (send-expect " " expect-generic))
+	(else 'startup-error)))
 
 (define (nethack-end)
   (if nao?
