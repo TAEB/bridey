@@ -76,13 +76,47 @@
 
    (("You see no objects here." "You feel no objects here.")
     (if (weird-position? state)
-	state
+	(set 'do-look? #t)
 	(set 'objects-here '())))
 
-   (("The fountain dries up!")
+   (("Something is written here in the frost."
+     "Something is written here in the dust.")
     (if (weird-position? state)
 	(set 'do-look? #t)
-	(remove-fountain state (get-coord))))
+	(set 'engraving-type 'dust)))
+
+   (("Something is engraved here on the floor."
+     "Something is engraved here on the ground."
+     "Something is engraved here on the ice."
+     "Something is engraved here on the bridge."
+     "Something is engraved here on the headstone.")
+    (if (weird-position? state)
+	(set 'do-look? #t)
+	(set 'engraving-type 'engrave)))
+     
+   (("Some text has been burned into the floor here."
+     "Some text has been burned into the ground here."
+     "Some text has been burned into the bridge here."
+     "Some text has been melted into the ice here.")
+    (if (weird-position? state)
+	(set 'do-look? #t)
+	(set 'engraving-type 'burn)))
+
+   (("The fountain dries up!"
+     "As the hand retreats, the fountain disappears!")
+    (remove-fountain state (get 'expected-coord)))
+
+   (("The flow reduces to a trickle.")
+    ; stop using
+    state)
+
+   (("You feel transparent"
+     "You feel very self-conscious."
+     "You see an image of someone stalking you.")
+    ; see invisible. check last-command for foutain quaffing
+    state)
+
+   
 
 					; status messages
    (("You feel confused." "Huh, What?" "You feel somewhat dizzy."
@@ -342,7 +376,17 @@
    ((or (string-drop-prefix "You see here " msg)
 	(string-drop-prefix "You feel here " msg))
     => (lambda (item)
-	 (set 'objects-here (list (chop-punct item)))))
+	 (if (weird-position? state)
+	     (set 'do-look? #t)
+	     (set 'objects-here (list (chop-punct item))))))
+   ((or (string-drop-prefix "You read: \"" msg)
+	(string-drop-prefix "You feel the words: \"" msg))
+    => (lambda (str)
+	 (let ((engraving (string-drop-suffix "\"." str)))
+	   (if (and engraving
+		    (not (weird-position? state)))
+	       (set 'engraving engraving)
+	       (set 'do-look? #t)))))
    ((string-drop-prefix "You finish eating " msg)
     => (lambda (food)
 	 (let* ((item (chop-punct food))
