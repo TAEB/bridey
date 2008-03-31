@@ -110,14 +110,28 @@
     ; stop using
     state)
 
-   (("You feel transparent"
+   (("The water glows for a moment."
+     "A feeling of loss comes over you.")
+    ; modify item
+    state)
+
+   (("You attract a water nymph!"
+     "You hear a seductive voice.")
+    ; should mark summoned nymph as awake
+    state)
+
+   (("You spot a gem in the sparkling waters!"
+     "You feel a gem here.")
+    state)
+   
+   (("You feel transparent."
      "You feel very self-conscious."
      "You see an image of someone stalking you.")
     ; see invisible. check last-command for foutain quaffing
     state)
 
-   
-
+   (("This water's no good!")
+    (set 'do-inventory? #t))
 					; status messages
    (("You feel confused." "Huh, What?" "You feel somewhat dizzy."
      "You feel trippy." "You feel rather light headed.")
