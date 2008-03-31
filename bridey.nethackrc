@@ -1,0 +1,39 @@
+# Bridey
+
+OPTIONS=!sparkle
+OPTIONS=runmode:teleport
+
+OPTIONS=autopickup,pickup_types:$!/="?
+OPTIONS=pickup_burden:unencumbered
+
+OPTIONS=color,showrace,showexp,showscore,time,use_darkgray
+OPTIONS=boulder:0
+
+OPTIONS=pettype:none
+OPTIONS=hilite_pet
+# The Flyte siblings
+OPTIONS=catname:Sebastian,dogname:Julia,horsename:Cordelia
+
+#OPTIONS=decgraphics
+#OPTIONS=lit_corridor
+
+# Just X ghosts
+OPTIONS=monsters:abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ@X'&;:~]
+
+# Pinched from TAEB; fancy silver {-shaped sinks and slanting \ tombstones.
+# For easy differentiation.
+OPTIONS=dungeon: |--------||.-|++##.##<><>_\\\\{{}.}..## #}
+
+
+AUTOPICKUP_EXCEPTION="<*named tooth*"      
+                                           
+AUTOPICKUP_EXCEPTION="<*magic marker*"     
+AUTOPICKUP_EXCEPTION="<*magic lamp*"       
+AUTOPICKUP_EXCEPTION="<*lamp called magic" 
+AUTOPICKUP_EXCEPTION="<*silver bell*"      
+AUTOPICKUP_EXCEPTION="<*Bell of Opening*"  
+AUTOPICKUP_EXCEPTION="<*candelabrum*"      
+AUTOPICKUP_EXCEPTION="<*Candelabrum*"      
+AUTOPICKUP_EXCEPTION="<*Book of the Dead*" 
+AUTOPICKUP_EXCEPTION="<*papyrus spellbook*"
+
