@@ -5,7 +5,7 @@
 			     (let ((d (if in-column? '(1 0) '(0 1))))
 			       (list (map + coord d)
 				     (map - coord d))))))
-	 (and (eq? 'black (square-color coord))
+	 (and (eq? 'none (square-color coord))
 	      (member (square-char coord) '(#\| #\-)))))
   (let ((ls (map (lambda (x/y2)
 		   (let ((coord (if in-column?
@@ -182,3 +182,20 @@
 		       (and (= (length ls) 1)
 			    (loop (car ls)
 				  cur))))))))))
+
+(define (wc2? coord)
+  (define (straight-neighbors c)
+    (filter wall?
+	    (map (lambda (dir) (map + c dir))
+		 '((0 -1) (1 0) (0 1) (-1 0)))))
+  (define (diagonal-neighbors c)
+    (filter wall?
+	    (map (lambda (dir) (map + c dir))
+		 '((1 -1) (1 1) (-1 1) (-1 -1)))))
+  (define (knights-move? a b)
+    (member (map abs (map - a b))
+	    '((1 2) (2 1))))
+  (let ((char (square-char coord)))
+    (any (lambda (c)
+	   (equal? (square-char c) char))
+	 (diagonal-neighbors coord))))

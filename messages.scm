@@ -79,6 +79,11 @@
 	state
 	(set 'objects-here '())))
 
+   (("The fountain dries up!")
+    (if (weird-position? state)
+	(set 'do-look? #t)
+	(remove-fountain state (get-coord))))
+
 					; status messages
    (("You feel confused." "Huh, What?" "You feel somewhat dizzy."
      "You feel trippy." "You feel rather light headed.")

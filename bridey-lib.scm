@@ -30,7 +30,7 @@
 			       'do-inventory? #f)
 		    state))
 	 (state (begin (botl-update) (turns-passed state)))
-	 (state (update-map state))
+	 (state (scan-map state))
 	 (get (specialize get-state state))
 	 (set (specialize set-state state))
 	 (coord (get-coord)))
@@ -103,6 +103,26 @@
 	((= x 80))
       (display (if (seen? (list x y)) "#" ".")))
     (newline)))
+
+(define (scan-map state)
+  (let ((scanners (get-state state 'scanners)))
+    (iterate-screen
+     (lambda (state coord glyph)
+       (case (cadr glyph)
+	 ((#\space)
+	  (if (square-covered-by-item? coord)
+	      (unmark-square-covered-by-item coord))
+	  state)
+	 ((#\I) state)
+	 (else
+	  (if (not (seen? coord))
+	      (mark-seen coord))
+	  (or (any (lambda (scanner)
+		     (scanner state coord glyph))
+		   scanners)
+	      state))))
+     state)))
+
 
 (define (update-map state)
   (iterate-screen

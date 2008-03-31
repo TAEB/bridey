@@ -1,6 +1,19 @@
+(define-structure main
+  (export)
+  (open scheme
+	tasks bridey-lib nethack item monster term utilities misc)
+  (files main))
+
+(define-structure tasks
+  (export add-task delete-task task-initial)
+  (open scheme srfi-1
+	bridey-lib state utilities misc)
+  (files tasks))
+
 (define-structure bridey-lib
   (export process-turn move fight search wait go-towards go-to
-	  push-action push-action-go)
+	  push-action push-action-go wall-curved? walk
+	  initial-state)
   (open scheme srfi-1 srfi-2 srfi-13 byte-vectors sorting
 	nethack item monster messages pathfinding state misc term botl
 	utilities scraper parse)
@@ -78,8 +91,9 @@
 	  square-covered-by-item? set-square-covered-by
 	  square-covered-match-current? unmark-square-covered-by-item
 	  mark-all-corridors-seen
-	  maybe-add-corpse add-fountain decrement-item
-	  create-level)
+	  maybe-add-corpse add-fountain remove-fountain
+	  decrement-item create-level
+	  send-event)
   (open scheme srfi-1 srfi-13 byte-vectors
 	monster item term state botl misc scraper parse)
   (files utilities))

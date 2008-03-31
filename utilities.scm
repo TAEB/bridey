@@ -319,6 +319,12 @@
 		      ls
 		      (cons x ls))))))
 
+(define (remove-fountain state coord)
+  (modify-state
+   state
+   'fountains (lambda (ls)
+		(delete (list (dlvl) coord ) ls))))
+
 (define (decrement-item state slot)
   (let* ((inventory (get-state state 'inventory))
 	 (item ((cadr (assoc slot inventory))))
@@ -382,4 +388,8 @@
 	(create-level state))))
 
 
-
+(define (send-event state event . arg)
+  (fold (lambda (task state)
+	  (apply task state event arg))
+	state
+	(get-state state 'tasks)))

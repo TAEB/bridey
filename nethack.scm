@@ -37,7 +37,8 @@
 	     (pty-init)))
   (read-expect
    (lambda (res tries)
-     (or (expect-generic res tries)
+     (or (match-before-cur? "for you? [ynq] ")
+	 (at-more?)
 	 (and (string-prefix? "There are some stale nethack processes"
 			      (get-row-plaintext 3))
 	      (system "sleep 10")
