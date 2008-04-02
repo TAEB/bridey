@@ -73,7 +73,7 @@
 
 (define (item-class item)
   (cond
-   ((get-item-field item 1) => identity)
+   ((get-item-field item 1))
    ((item-corpse? item) 'food)
    ((member (item-name item)
 	    '("bag" "lamp" "whistle" "horn" "candle" "candles" "harp"
@@ -197,8 +197,7 @@
        (and m (let ((str (substring item (match-start m) (match-end m))))
 		(cond ((string=? str "uncursed") 'uncursed)
 		      ((string=? str "blessed") 'blessed)
-		      (else 'cursed))))))
-    => identity)
+		      (else 'cursed)))))))
    (priest? 'uncursed)
    ((or (item-charges item)
 	(and (item-enchantment item)
