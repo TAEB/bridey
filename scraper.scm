@@ -23,6 +23,37 @@
 			  (write s)
 			  (display "!\n")))))))))
 
+(define (get-discoveries)
+  (let ((start-col
+	 (send-expect "\\"
+		      (lambda (res tries)
+			(and (at-more?)
+			     (+ 1 (string-contains (get-row-plaintext 1)
+						   "Discoveries")))))))
+
+    (let loop ((ls '()))
+      (if (not (at-more?))
+	  ls
+	  (let ((lines (map (lambda (y)
+			      (string-trim-right
+			       (get-row-plaintext y start-col)
+			       #\space))
+			    (range 1 (- (cadr (get-coord)) 1)))))
+	    (send-expect " " expect-generic)
+	    (loop
+	     (append
+	      (filter-map
+	       (lambda (line)
+		 (and (or (string-prefix? "  " line)
+			  (string-prefix? "* " line))
+		      (let ((paren (string-index line #\()))
+			(list (substring line 2 (- paren 1))
+			      (substring line
+					 (+ paren 1)
+					 (- (string-length line) 1))))))
+	       lines)
+	      ls)))))))
+
 (define (get-objects-here state)
   (define (getline y)
     (string-trim-right

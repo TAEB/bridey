@@ -136,7 +136,7 @@
   (files parse))
 
 (define-structure scraper
-  (export get-inventory far-look redraw-screen get-objects-here
+  (export get-inventory get-discoveries far-look redraw-screen get-objects-here
 	  do-look read-topl)
   (open scheme srfi-1 srfi-2 srfi-13
 	state nethack botl misc term parse)
