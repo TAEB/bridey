@@ -46,25 +46,31 @@
     state)
    (("As you kick the door, it crashed open!"
      "You kick at empty space.")
-    (if (same-level? state)
-	(let ((c (map + (get 'expected-coord) (cadr (get 'last-command)))))
-	  (unmark-door c)
-	  (unmark-embedded c)))
+    (let ((c (map + (get 'expected-coord) (cadr (get 'last-command)))))
+      (unmark-door c)
+      (unmark-embedded c))
     state)
    (("There is an open door here.")
-    ; no message if you get teleported away immediately
-    (mark-open-door (get-coord)))
+    (if (weird-position? state)
+	(set 'do-look? #t)
+	(begin (mark-open-door (get-coord))
+	       state)))
    
    (("There is a fountain here.")
     (if (weird-position? state)
 	(set 'do-look? #t)
-	(set 'fountains (assoc-replace (list (dlvl) (get-coord))
-				       (get 'fountains)))))
+	(if (fountain? (get-coord))
+	    state
+	    (begin (add-fountain (get-coord))
+		   (send-event state 'found-fountain (get-coord))))))
    (("There is an opulent throne here.")
     (if (weird-position? state)
 	(set 'do-look? #t)
-	(set 'thrones (assoc-replace (list (dlvl) (get-coord))
-				     get 'thrones))))
+	(if (throne? (get-coord))
+	    state
+	    (begin (add-throne (get-coord))
+		   (send-event state 'found-throne (get-coord))))))
+
    (("There is a doorway here.")
     state) ; TODO
 
@@ -104,20 +110,23 @@
 
    (("The fountain dries up!"
      "As the hand retreats, the fountain disappears!")
-    (remove-fountain state (get 'expected-coord)))
-
-   (("The flow reduces to a trickle.")
-    ; stop using
+    (remove-fountain (get 'expected-coord))
     state)
 
+   (("The flow reduces to a trickle."
+     "A watchman yells:  \"Hey, stop using that fountain!\""
+     "A watch captain yells:  \"Hey, stop using that fountain!\"")
+    (fountain-got-warning (get 'expected-coord))
+    state)
+     
    (("The water glows for a moment."
      "A feeling of loss comes over you.")
-    ; modify item
+    ;; modify item
     state)
 
    (("You attract a water nymph!"
      "You hear a seductive voice.")
-    ; should mark summoned nymph as awake
+    ;; should mark summoned nymph as awake
     state)
 
    (("You spot a gem in the sparkling waters!"
@@ -127,12 +136,17 @@
    (("You feel transparent."
      "You feel very self-conscious."
      "You see an image of someone stalking you.")
-    ; see invisible. check last-command for foutain quaffing
+    ;; see invisible. check last-command for foutain quaffing
     state)
 
    (("This water's no good!")
     (set 'do-inventory? #t))
-					; status messages
+
+   (("The boulder falls apart.")
+    state)
+
+   
+   ;; status messages
    (("You feel confused." "Huh, What?" "You feel somewhat dizzy."
      "You feel trippy." "You feel rather light headed.")
     (set 'confused? #t))
@@ -154,35 +168,38 @@
    (("You feel a bit steadier now.")
     (set 'stunned? #f))
 
-					; intrinsics
+   ;; intrinsics
+   ;; TODO: send an event
    (("You feel a momentary chill." "You be chillin'.")
-    state)
+    (cons-state state 'intrinsics 'fire))
    (("You feel wide awake.")
-    state)
+    (cons-state state 'intrinsics 'sleep))
    (("You feel full of hot air.")
-    state)
+    (cons-state state 'intrinsics 'cold))
    (("You feel firm." "You feel totally together, man.")
-    state)
+    (cons-state state 'intrinsics 'disintegration))
    (("Your health currently feels amplified!"
      "You feel grounded in reality.")
-    state)
+    (cons-state state 'intrinsics 'shock))
    (("You feel healthy.")
-    state)
-   (("You feel especially healthy.")
-    state)
+    (cons-state state 'intrinsics 'poison))
+   
    (("You feel very jumpy." "You feel diffuse.")
-    state)
+    (cons-state state 'intrinsics 'teleportitis))
    (("You feel in control of yourself."
      "You feel centered in your personal space.")
-    state)
+    (cons-state state 'intrinsics 'teleport-control))
    (("You feel a strange mental acuity."
      "You feel in touch with the cosmos.")
-    state)
+    (cons-state state 'intrinsics 'telepathy))
    (("You feel hidden!")
-    state)
+    (set 'intrinsics (append '(see-invisible invisibility)
+			     (get 'intrinsics))))
    (("You seem faster." "You speed up." "Your quickness feels more natural.")
-    state)
-   
+    (cons-state state 'intrinsics 'speed))
+
+   ;; these below should call something besides just removing intrinsic
+   ;; from 'intrinsics
    (("You feel warmer.")
     state)
    (("You feel less jumpy.")
@@ -206,7 +223,9 @@
    (("You feel less attractive.")
     state)
 
-					; ID stuff
+   ;; ID stuff
+   (("You feel especially healthy.")
+    state)
    (("You feel mildly chilly.")
     state)
    (("You feel mildly hot.")
@@ -214,14 +233,24 @@
    (("You feel mildly warm.")
     state)
 
+   (("You feel like a new man!"
+     "You feel like a new woman!"
+     "You feel like a new gnome!"
+     "You feel like a new elf!"
+     "You feel like a new orc!"
+     "You feel like a new dwarf!")
+    ;; adjust stats
+    state)
+     
 
-					; Temples
+
+   ;; Temples
    (("You have a forbidding feeling."
      "You have a strange forbidding feeling."
      "You experience a strange sense of peace.")
     state)
 
-					; Sounds
+   ;; Sounds
    (("You hear someone cursing shoplifters."
      "You hear the chime of a cash register."
      "You hear Neiman and Marcus arguing!")
@@ -267,15 +296,23 @@
      "You hear a loud ZOT!")
     state)
 
+   (("You enter what seems to be an older, more primitive world.")
+    (mark-special 'rogue)
+    state)
+
    (("The heat and smoke are gone.")
     state)
    (("You penetrated a high security area!")
     state)
 
-					; Nasty stuff
+   ;; Nasty stuff
    (("You feel feverish.")
     state)
    (("You murderer!")
+    state)
+   (("You see an angry guard approaching!"
+     "You hear the shrill sound of a guard's whistle.")
+    ;; "Oh, shit."
     state)
 
    (("You wake up.")
@@ -293,10 +330,10 @@
    (("You enter what seems to be an older, more primitive world.")
     (set 'rogue-level (dlvl)))
 
-					; Traps
+   ;; Traps
    (("You are momentarily blinded by a flash of light!"
      "You hear a deafening roar!")
-					; TODO: evasive action... or something
+    ;; TODO: evasive action... or something
     (state-mark-trap state 'magic))
    (("There is a magic trap here." "You escape a magic trap."
      "You see a flash of light!" "A shiver runs up and down your spine!"
@@ -422,6 +459,15 @@
 	       (decrement-item
 		(set 'nutrition nutrition)
 		(cadr (get 'last-command)))))))
+   ((and (string-drop-suffix " here." msg)
+	 (string-drop-prefix "There is an altar to " msg))
+    => (lambda (str)
+	 (let ((align (cond ((string-contains str "lawful") 'lawful)
+			    ((string-contains str "neutral") 'neutral)
+			    ((string-contains str "chaotic") 'chaotic)
+			    ((string-contains str "unaligned") 'unaligned))))
+	   (begin (add-altar (get-coord) align)
+		  state))))
    (else state)))
 
 
